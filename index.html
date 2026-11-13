@@ -74,8 +74,8 @@ h1{font:800 clamp(34px,5.4vw,60px)/1.08 var(--font-display);letter-spacing:-.02e
 .qcard .f2{right:78px;top:44px;width:70px;height:70px;border-width:10px;border-radius:5px;opacity:.3;transform:rotate(-13deg)}
 .qcard>*:not(.frame){position:relative}
 .go{display:flex;gap:10px;flex-wrap:wrap}
-.go span{padding:10px 16px;border-radius:9px;font-weight:700;background:var(--chip);border:1px solid var(--line)}
-.go span:first-child{background:var(--grad);color:#fff;border-color:transparent}
+.go>span{padding:10px 16px;border-radius:9px;font-weight:700;background:var(--chip);border:1px solid var(--line)}
+.go>span:first-child{background:var(--grad);color:#fff;border-color:transparent}
 .stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
 .stat{background:var(--bg2);border:1px solid var(--line);border-radius:10px;padding:12px;min-width:0}
 .stat small{display:block;color:var(--muted);font-size:11px}
@@ -89,6 +89,7 @@ h2{font:800 clamp(24px,3.6vw,36px)/1.2 var(--font-display);margin:0 0 12px;lette
 .card{background:var(--bg2);border:1px solid var(--line);border-radius:14px;padding:22px;min-width:0}
 .card h3{font:700 17px/1.4 var(--font-display);margin:0 0 8px}
 .card p{margin:0;color:var(--muted);font-size:15px}
+.pill{display:inline-block;padding:9px 14px;border-radius:9px;background:var(--chip);border:1px solid var(--line);font-weight:700;font-size:14px}
 .tag{font:500 11px var(--font-mono);letter-spacing:.1em;color:var(--blue);text-transform:uppercase;display:block;margin-bottom:10px}
 
 .split{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:32px;align-items:start}
@@ -112,7 +113,7 @@ footer{padding-block:40px 56px;border-top:1px solid var(--line);color:var(--mute
   .hero{gap:36px;padding-block:32px 48px}
   .win .body{grid-template-columns:104px minmax(0,1fr)}
 }
-@media (max-width:440px){.stats{grid-template-columns:minmax(0,1fr)}.win .body{grid-template-columns:minmax(0,1fr);padding:0 8px}.side{display:none}.go span{flex:1 1 100%}}
+@media (max-width:440px){.stats{grid-template-columns:minmax(0,1fr)}.win .body{grid-template-columns:minmax(0,1fr);padding:0 8px}.side{display:none}.go>span{flex:1 1 100%}}
 @media (prefers-reduced-motion:no-preference){.btn{transition:filter .15s}}
 </style>
 <style>body{margin:0}</style>
@@ -127,6 +128,7 @@ footer{padding-block:40px 56px;border-top:1px solid var(--line);color:var(--mute
     <a href="#features"><span class="ja">機能</span><span class="en">Features</span></a>
     <a href="#flags">FastFlags</a>
     <a href="#mods">Mods</a>
+    <a href="#open"><span class="ja">オープンソース</span><span class="en">Open source</span></a>
     <a href="#start"><span class="ja">導入</span><span class="en">Install</span></a>
     <span class="seg" role="group" aria-label="Language">
       <button type="button" id="b-ja" aria-pressed="false">日本語</button>
@@ -137,14 +139,15 @@ footer{padding-block:40px 56px;border-top:1px solid var(--line);color:var(--mute
 
 <div class="hero">
   <div>
-    <div class="eyebrow">Windows · .NET 8 · beta 0.0.3</div>
-    <h1><span class="ja">Robloxを、自分の環境に合わせて起動する。</span><span class="en">Launch Roblox the way your PC likes it.</span></h1>
-    <p class="lead"><span class="ja">FPS上限の解放、描画APIの切り替え、カーソル・死亡音・スカイボックス・フォントの変更を、ひとつの軽いランチャーにまとめました。設定は起動のたびに自動で適用されます。</span><span class="en">Unlock your frame rate, switch graphics APIs, and swap the cursor, death sound, skybox and font. One small launcher applies it all on every start.</span></p>
+    <div class="eyebrow">Open Source · Windows · .NET 8</div>
+    <h1><span class="ja">Robloxを、もっと速く。もっと自分らしく。</span><span class="en">Roblox, faster and unmistakably yours.</span></h1>
+    <p class="lead"><span class="ja">AZQLAUNCHERは、Robloxを起動する前にFPS上限の解放と描画設定を整え、フォント・スカイボックス・カーソル・死亡音まで好みに差し替えるWindows用ランチャーです。難しい設定ファイルは触りません。ファイルを選んでボタンを押すだけで、次の起動から反映されます。</span><span class="en">AZQLAUNCHER is a Windows launcher that unlocks your frame rate and tunes rendering before Roblox starts, then swaps in your own font, skybox, cursor and death sound. No config files to edit. Pick a file, press a button, and it takes effect on the next launch.</span></p>
     <div class="cta">
       <a class="btn primary" href="https://github.com/Azuk1-azq/azqlauncher/releases/download/beta0.0.3/azqlauncher.zip"><span class="ja">ダウンロード (beta0.0.3)</span><span class="en">Download (beta0.0.3)</span></a>
       <a class="btn" href="#start"><span class="ja">導入手順を見る</span><span class="en">How to install</span></a>
+      <a class="btn" href="https://github.com/Azuk1-azq/azqlauncher/tree/main"><span class="ja">GitHubでソースを見る</span><span class="en">View source on GitHub</span></a>
     </div>
-    <div class="meta">ja / en · <span class="ja">ホワイトリスト準拠</span><span class="en">allowlist-only flags</span> · roblox-player://</div>
+    <div class="meta"><span class="ja">ソースコードはすべて公開 / 許可リスト内のFastFlagsだけを適用 / Robloxの更新後も自動で再適用 / ワンクリックで標準起動に戻せます</span><span class="en">Fully open source / Only allowlisted FastFlags / re-applied after every Roblox update / one click back to stock</span></div>
   </div>
 
   <div class="win" role="img" aria-label="AZQLAUNCHER dashboard">
@@ -175,8 +178,8 @@ footer{padding-block:40px 56px;border-top:1px solid var(--line);color:var(--mute
 </div>
 
 <section id="features">
-  <h2><span class="ja">起動前に整えて、起動後は邪魔をしない</span><span class="en">Set up before launch, then get out of the way</span></h2>
-  <p class="sub"><span class="ja">ランチャーはRobloxの設定ファイルとMod用フォルダを書き換えてからクライアントを起動し、必要なら自分自身を閉じます。</span><span class="en">The launcher writes the client settings and mod files first, starts Roblox, then closes itself if you want it to.</span></p>
+  <h2><span class="ja">起動前にすべて整え、あとは邪魔をしない</span><span class="en">Everything is set before launch, then it steps aside</span></h2>
+  <p class="sub"><span class="ja">ランチャーは、Robloxを起動する直前に設定とModのファイルを書き込みます。起動を見届けると自動で閉じる設定が初期状態なので、遊んでいる間は何も動いていません。</span><span class="en">Right before Roblox starts, the launcher writes your settings and mod files. By default it closes itself once Roblox is running, so nothing of it stays open while you play.</span></p>
   <div class="grid">
     <div class="card"><span class="tag">FastFlags</span><h3><span class="ja">FPS上限の解放と描画設定</span><span class="en">FPS unlock and rendering</span></h3><p><span class="ja">目標FPS、PostFXの無効化、レンダリング品質の軽量化、描画API(D3D11 / D3D10 / Vulkan / OpenGL)を画面から選べます。</span><span class="en">Set a target FPS, disable PostFX, lower render quality and pick a graphics API (D3D11, D3D10, Vulkan, OpenGL) from the UI.</span></p></div>
     <div class="card"><span class="tag">Mods</span><h3><span class="ja">見た目と音のカスタマイズ</span><span class="en">Look and sound</span></h3><p><span class="ja">カーソル、死亡時の効果音、スカイボックス、UIフォントを差し替えます。汎用Modsフォルダのファイルもそのままコピーされます。</span><span class="en">Replace the cursor, death sound, skybox and UI font. Anything in the general Mods folder is copied in as well.</span></p></div>
@@ -204,17 +207,37 @@ footer{padding-block:40px 56px;border-top:1px solid var(--line);color:var(--mute
 </section>
 
 <section id="mods">
-  <h2><span class="ja">Modsは4種類</span><span class="en">Four kinds of mods</span></h2>
-  <p class="sub"><span class="ja">どれも起動のたびに自動で適用され、まとめてオフにもできます。</span><span class="en">Each one is applied on every launch, and you can switch them all off at once.</span></p>
+  <h2><span class="ja">フォントもスカイボックスも、ボタンひとつ</span><span class="en">One button for fonts, skyboxes and more</span></h2>
+  <p class="sub"><span class="ja">ファイルかフォルダを選ぶだけです。ファイルの置き場所やRobloxの内部フォルダを自分で探す必要はありません。選んだものは設定に保存され、起動のたびに自動で適用されます。</span><span class="en">Pick a file or a folder and you are done. No digging through Roblox's internal folders. Your choice is saved and applied on every launch.</span></p>
+  <div class="grid" style="margin-bottom:40px">
+    <div class="card"><span class="tag"><span class="ja">フォント</span><span class="en">Font</span></span><span class="pill"><span class="ja">フォントファイルを選択</span><span class="en">Select Font File</span></span><p style="margin-top:14px"><span class="ja">.ttf か .otf を1つ選ぶと、Robloxが使う主要なUIフォント(Source Sans Pro、Gotham、Builder Sans)がすべてそのフォントに置き換わります。</span><span class="en">Choose one .ttf or .otf and it replaces every main UI font Roblox uses (Source Sans Pro, Gotham and Builder Sans).</span></p></div>
+    <div class="card"><span class="tag"><span class="ja">スカイボックス</span><span class="en">Skybox</span></span><span class="pill"><span class="ja">スカイボックスフォルダを選択</span><span class="en">Select Skybox Folder</span></span><p style="margin-top:14px"><span class="ja">bk, dn, ft, lf, rt, up で終わる名前の6枚を入れたフォルダを選びます。面ごとに正しい場所へ自動でコピーされます。</span><span class="en">Choose a folder with six images whose names end in bk, dn, ft, lf, rt and up. Each face is copied to the right place for you.</span></p></div>
+    <div class="card"><span class="tag"><span class="ja">死亡音</span><span class="en">Death sound</span></span><span class="pill"><span class="ja">音声ファイルを選択</span><span class="en">Select Audio</span></span><p style="margin-top:14px"><span class="ja">mp3、wav、m4a、aac、flac、wma も選べます。ogg 以外はFFmpegで自動変換されます。FFmpegは初回だけ自動でダウンロードされるため、そのときはネット接続が必要です。</span><span class="en">Pick mp3, wav, m4a, aac, flac or wma too. Anything that is not ogg is converted with FFmpeg, which is downloaded automatically the first time, so you need a connection then.</span></p></div>
+    <div class="card"><span class="tag"><span class="ja">カーソル</span><span class="en">Cursor</span></span><span class="pill"><span class="ja">カーソル画像 (.png) を選択</span><span class="en">Select Cursor (.png)</span></span><p style="margin-top:14px"><span class="ja">自分のPNGのほか、Windowsで使用中のカーソルや昔のクラシックカーソルをラジオボタンで選べます。</span><span class="en">Use your own PNG, or choose your current Windows cursor or the classic one with a radio button.</span></p></div>
+  </div>
   <div class="tbl"><table>
-    <thead><tr><th><span class="ja">項目</span><span class="en">Item</span></th><th><span class="ja">選べるもの</span><span class="en">Options</span></th></tr></thead>
+    <thead><tr><th><span class="ja">項目</span><span class="en">Item</span></th><th><span class="ja">解除するには</span><span class="en">To undo</span></th></tr></thead>
     <tbody>
-      <tr><td><span class="ja">カーソル</span><span class="en">Cursor</span></td><td><span class="ja">Windowsの現在のカーソル / Roblox標準 / 2013年以前のクラシック / 自分のPNG。適用後に上書きされないよう監視する保護機能付き。</span><span class="en">Current Windows cursor, Roblox default, pre-2013 classic, or your own PNG. A watcher re-applies it if Roblox overwrites it.</span></td></tr>
-      <tr><td><span class="ja">死亡音</span><span class="en">Death sound</span></td><td><span class="ja">クラシックなOof音、または mp3 / wav / ogg などの音声ファイル(自動変換)。</span><span class="en">The classic Oof, or any mp3 / wav / ogg file (converted automatically).</span></td></tr>
-      <tr><td><span class="ja">スカイボックス</span><span class="en">Skybox</span></td><td><span class="ja">bk, dn, ft, lf, rt, up の6面を入れたフォルダ。</span><span class="en">A folder holding the six faces: bk, dn, ft, lf, rt, up.</span></td></tr>
-      <tr><td><span class="ja">フォント</span><span class="en">Font</span></td><td><span class="ja">.ttf / .otf ファイル。</span><span class="en">A .ttf or .otf file.</span></td></tr>
+      <tr><td><span class="ja">フォント / スカイボックス / 死亡音 / カーソル</span><span class="en">Font / Skybox / Death sound / Cursor</span></td><td><span class="ja">それぞれの横にある「解除」を押します。Mods全体は、ワンクリックでオフにもできます。</span><span class="en">Press Clear next to each one. You can also switch all mods off with a single checkbox.</span></td></tr>
+      <tr><td><span class="ja">そのほかのファイル</span><span class="en">Anything else</span></td><td><span class="ja">Mods フォルダに入れたファイルは、Robloxのフォルダ構造のままコピーされます。「Modsフォルダを開く」から開けます。</span><span class="en">Files in the Mods folder are copied into Roblox with the same folder layout. Open it with "Open Mods Folder".</span></td></tr>
     </tbody>
   </table></div>
+</section>
+
+<section id="open">
+  <div class="split">
+    <div>
+      <span class="tag">Open Source</span>
+      <h2><span class="ja">ソースコードは、すべて公開しています</span><span class="en">Every line of source is public</span></h2>
+      <p class="sub" style="margin-bottom:24px"><span class="ja">ランチャーはRobloxのフォルダと設定に手を入れるツールです。だから何をしているのかを、誰でも自分の目で確かめられるようにしました。気になる処理はコードで読めて、自分でビルドして動かせて、改善案はそのまま提案できます。</span><span class="en">A launcher touches Roblox's folders and settings, so you should be able to see exactly what it does. Read any behavior in the code, build it yourself, and send improvements straight back.</span></p>
+      <p style="margin:0"><a class="btn primary" href="https://github.com/Azuk1-azq/azqlauncher/tree/main"><span class="ja">GitHubでソースを見る</span><span class="en">View source on GitHub</span></a></p>
+    </div>
+    <div class="grid" style="grid-template-columns:minmax(0,1fr)">
+      <div class="card"><h3><span class="ja">読んで確かめられる</span><span class="en">Read it</span></h3><p><span class="ja">書き込むのはRobloxのバージョンフォルダ、ランチャー自身の設定、ブラウザ連携用のレジストリ(現在のユーザー分のみ)です。FastFlagsの許可リストもコードにそのまま書いてあります。</span><span class="en">It writes to the Roblox version folder, its own settings, and the per-user registry keys for browser launch. The FastFlags allowlist is right there in the code.</span></p></div>
+      <div class="card"><h3><span class="ja">自分でビルドできる</span><span class="en">Build it</span></h3><p><span class="ja">配布のzipを使わず、ソースから自分でビルドした実行ファイルを使えます。.NET 8 SDKだけで動きます。</span><span class="en">Skip the release zip and run your own build. The .NET 8 SDK is all you need.</span></p></div>
+      <div class="card"><h3><span class="ja">一緒に育てられる</span><span class="en">Shape it</span></h3><p><span class="ja">不具合の報告、機能の提案、コードの修正をGitHubで受け付けています。</span><span class="en">Report bugs, suggest features and send fixes on GitHub.</span></p></div>
+    </div>
+  </div>
 </section>
 
 <section id="start">
@@ -246,7 +269,7 @@ config.json  Mods\  Assets\  Tools\</pre>
 
 <footer>
   <div class="logo"><span class="mark"></span>AZQLAUNCHER<span class="badge">beta0.0.3</span></div>
-  <div><span class="ja">Windows 10/11 · .NET 8 · WPF</span><span class="en">Windows 10/11 · .NET 8 · WPF</span></div>
+  <div><a href="https://github.com/Azuk1-azq/azqlauncher/tree/main">GitHub</a> · <span class="ja">Windows 10/11 · .NET 8 · WPF</span><span class="en">Windows 10/11 · .NET 8 · WPF</span></div>
 </footer>
 </div>
 
