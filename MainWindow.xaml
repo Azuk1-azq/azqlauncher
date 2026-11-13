@@ -1,7 +1,7 @@
 ﻿<Window x:Class="AZQLAUNCHER.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="AZQLAUNCHER" Height="652" Width="992"
+        Title="AZQLAUNCHER" Icon="Assets/app.ico" Height="652" Width="992"
         FontFamily="Segoe UI Variable Text, Segoe UI, Yu Gothic UI, Meiryo UI" TextOptions.TextFormattingMode="Ideal"
         WindowStyle="None" AllowsTransparency="True" Background="Transparent"
         WindowStartupLocation="CenterScreen" MouseDown="Window_MouseDown">
@@ -337,6 +337,9 @@
                                     <Button x:Name="BtnOpenRobloxFolder" Content="Robloxのクライアントフォルダを開く" Style="{StaticResource SecondaryButton}" Width="230" Height="38" Click="OpenRobloxFolder_Click"/>
                                     <Button x:Name="BtnRepairRoblox" Content="ClientSettings・読み取り専用解除" Style="{StaticResource DangerButton}" Width="230" Height="38" Margin="10,0,0,0" Click="RepairRoblox_Click"/>
                                     <Button x:Name="BtnShowIntro" Content="機能紹介ガイド" Style="{StaticResource SecondaryButton}" Width="140" Height="38" Margin="10,0,0,0" Click="ShowIntro_Click"/>
+                                </StackPanel>
+                                <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
+                                    <Button x:Name="BtnImportData" Content="以前のバージョンから設定を引き継ぐ" Style="{StaticResource SecondaryButton}" Width="280" Height="38" Click="ImportData_Click"/>
                                 </StackPanel>
                             </StackPanel>
                         </ScrollViewer>

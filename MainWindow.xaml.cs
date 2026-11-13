@@ -56,6 +56,8 @@ namespace AZQLAUNCHER
         private bool isLoaded = false;
         private bool isRunningAsProtocol = false;
         private TextBlock? protocolLaunchText;
+        private Window? protocolWindow;
+        private System.Windows.Forms.NotifyIcon? trayIcon;
 
         private static readonly HashSet<string> AllowedFastFlags = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
         {
@@ -102,9 +104,11 @@ namespace AZQLAUNCHER
             Directory.CreateDirectory(assetsDir);
             Directory.CreateDirectory(toolsDir);
 
+            bool configExistedAtStart = File.Exists(configPath);
             LoadSettings();
             ApplyLanguage();
             isLoaded = true;
+            InitTray();
 
             if (config.AutoRegisterProtocol)
             {
@@ -122,6 +126,12 @@ namespace AZQLAUNCHER
                 WelcomeOverlay.Visibility = Visibility.Visible;
                 config.IsFirstLaunch = false;
                 SaveSettings();
+            }
+
+            // 新しいフォルダでの初回起動時は、隣にある以前のバージョンを探して引き継ぎを提案する
+            if (!isRunningAsProtocol && !configExistedAtStart)
+            {
+                Dispatcher.BeginInvoke(new Action(PromptImportOnFirstRun));
             }
         }
 
@@ -202,7 +212,7 @@ namespace AZQLAUNCHER
             ChkBypassLauncher.Content = isJa ? "ブラウザから起動時もランチャーを通さないで標準起動する" : "Bypass Launcher on Browser Launch";
             ChkProtectCursor.Content = isJa ? "カスタムカーソルの適用を維持する" : "Keep custom cursor applied";
             ChkAutoRegisterProtocol.Content = isJa ? "ランチャー起動時にブラウザ連携を自動登録する" : "Auto-register browser protocol on startup";
-            ChkAutoClose.Content = isJa ? "Robloxの起動完了後にランチャーを自動で閉じる" : "Automatically close launcher after Roblox starts";
+            ChkAutoClose.Content = isJa ? "Robloxの起動後は画面を隠してトレイに常駐し、Roblox終了時に自動で終了する" : "After Roblox starts, hide to the tray and exit when Roblox closes";
             ChkCleanClientSettings.Content = isJa ? "Roblox起動前に古いClientAppSettingsをクリーンアップする" : "Clean up old ClientAppSettings before launching Roblox";
             LblProtocolTitle.Text = isJa ? "ブラウザ連携 (URIプロトコル)" : "Browser Integration (URI Protocol)";
             BtnReRegisterProtocol.Content = isJa ? "ブラウザ連携を手動で再登録" : "Re-register Protocol Manually";
@@ -210,6 +220,7 @@ namespace AZQLAUNCHER
             BtnOpenRobloxFolder.Content = isJa ? "Robloxのクライアントフォルダを開く" : "Open Roblox Client Folder";
             BtnRepairRoblox.Content = isJa ? "ClientSettings・読み取り専用解除" : "Reset ClientSettings & Permissions";
             BtnShowIntro.Content = isJa ? "機能紹介ガイド" : "Feature Guide";
+            BtnImportData.Content = isJa ? "以前のバージョンから設定を引き継ぐ" : "Import Data from Previous Version";
 
             LblWelcomeTitle.Text = isJa ? "AZQLAUNCHER へようこそ！" : "Welcome to AZQLAUNCHER!";
             LblWelcomeSub.Text = isJa ? "主な機能のご紹介" : "Overview of Main Features";
@@ -638,7 +649,7 @@ namespace AZQLAUNCHER
 
                 ShowInTaskbar = false;
                 Loaded += (_, __) => Hide();
-                var bgWindow = new Window
+                protocolWindow = new Window
                 {
                     WindowStyle = WindowStyle.None,
                     AllowsTransparency = true,
@@ -679,8 +690,8 @@ namespace AZQLAUNCHER
                 });
 
                 border.Child = sp;
-                bgWindow.Content = border;
-                bgWindow.Show();
+                protocolWindow.Content = border;
+                protocolWindow.Show();
 
                 LaunchRobloxClient(args[1], bypass: config.BypassLauncher);
             }
@@ -708,6 +719,11 @@ namespace AZQLAUNCHER
             if (!isRunningAsProtocol) LaunchOverlay.Visibility = Visibility.Visible;
 
             string? robloxExe = GetLatestRobloxExe();
+            if (robloxExe == null)
+            {
+                robloxExe = await InstallRobloxAsync();
+                UpdateDashboard();
+            }
             if (robloxExe == null)
             {
                 AddLog("エラー: RobloxPlayerBeta.exe が見つかりませんでした。");
@@ -816,23 +832,32 @@ namespace AZQLAUNCHER
                 }
 
                 bool robloxStarted = waitResult.beta != null;
-                if (!robloxStarted && !isRunningAsProtocol)
+                if (!robloxStarted)
                 {
-                    // 起動できなかった(キャンセル等)場合はランチャーを閉じずに残す
-                    LaunchOverlay.Visibility = Visibility.Collapsed;
+                    // 起動できなかった(キャンセル等)
+                    if (!isRunningAsProtocol) LaunchOverlay.Visibility = Visibility.Collapsed;
+                    else Application.Current.Shutdown();
                 }
                 else if (config.AutoClose || isRunningAsProtocol)
                 {
-                    AddLog("自動終了オプションが有効なため、まもなくランチャーを終了します。");
-                    await Task.Delay(1500);
-                    // 保護チェックが走っている間に終了すると、保護が一度も実行されないため完了を待つ
+                    // Bloxstrapと同じ: 起動を確認したらすぐ画面を隠し、トレイに常駐してRobloxを見張る。
+                    // Robloxが終了したらランチャーも終了する。
+                    CloseProtocolWindow();
+                    LaunchOverlay.Visibility = Visibility.Collapsed;
+                    Hide();
+                    SetTrayStatus(true);
+                    AddLog("Robloxの起動を確認しました。トレイに常駐して監視します。");
+
+                    // カーソル保護の確認はバックグラウンドで続ける
                     try { await protectionTask; } catch { }
+                    await WatchRobloxAsync();
                     Application.Current.Shutdown();
                 }
                 else
                 {
+                    CloseProtocolWindow();
                     await Task.Delay(2000);
-                    if (!isRunningAsProtocol) LaunchOverlay.Visibility = Visibility.Collapsed;
+                    LaunchOverlay.Visibility = Visibility.Collapsed;
                 }
             }
             catch (Exception ex)
@@ -840,6 +865,186 @@ namespace AZQLAUNCHER
                 AddLog($"起動エラー: {ex.Message}");
                 if (!isRunningAsProtocol) LaunchOverlay.Visibility = Visibility.Collapsed;
                 else Application.Current.Shutdown();
+            }
+        }
+
+        // Robloxが未インストールの場合、公式インストーラーを取得して実行し、インストール完了まで待つ。
+        private async Task<string?> InstallRobloxAsync()
+        {
+            bool isJa = GetEffectiveLanguage() == "ja";
+
+            if (!isRunningAsProtocol)
+            {
+                var answer = MessageBox.Show(
+                    isJa ? "Robloxが見つかりません。公式インストーラーをダウンロードして、自動でインストールしますか?"
+                         : "Roblox was not found. Download the official installer and install it now?",
+                    "AZQLAUNCHER", MessageBoxButton.YesNo, MessageBoxImage.Question);
+                if (answer != MessageBoxResult.Yes) return null;
+            }
+
+            AddLog("Robloxが見つからないため、公式インストーラーを取得します。");
+            SetLaunchStatus(isJa ? "Robloxのインストーラーをダウンロード中..." : "Downloading the Roblox installer...");
+
+            string installerPath = Path.Combine(Path.GetTempPath(), "RobloxPlayerInstaller.exe");
+            try
+            {
+                using (var client = new HttpClient { Timeout = TimeSpan.FromMinutes(2) })
+                {
+                    byte[] data = await client.GetByteArrayAsync("https://setup.rbxcdn.com/RobloxPlayerInstaller.exe");
+                    await File.WriteAllBytesAsync(installerPath, data);
+                }
+
+                AddLog("Robloxのインストーラーを実行しました。完了するまで待機します...");
+                SetLaunchStatus(isJa ? "Robloxをインストール中..." : "Installing Roblox...");
+
+                Process? installer = Process.Start(new ProcessStartInfo
+                {
+                    FileName = installerPath,
+                    UseShellExecute = true
+                });
+
+                var sw = Stopwatch.StartNew();
+                while (sw.Elapsed < TimeSpan.FromMinutes(10))
+                {
+                    string? exe = GetLatestRobloxExe();
+                    if (exe != null)
+                    {
+                        // ファイルの書き込みが終わるのを少し待つ
+                        await Task.Delay(1500);
+                        AddLog("Robloxのインストールが完了しました。");
+                        return exe;
+                    }
+
+                    bool installerAlive = installer != null && !installer.HasExited;
+                    if (!installerAlive && !IsRobloxUpdaterRunning() && sw.Elapsed > TimeSpan.FromSeconds(30))
+                    {
+                        AddLog("Robloxのインストールを確認できませんでした (キャンセルされた可能性があります)。");
+                        return null;
+                    }
+
+                    await Task.Delay(500);
+                }
+
+                AddLog("Robloxのインストール待機がタイムアウトしました。");
+                return null;
+            }
+            catch (Exception ex)
+            {
+                AddLog($"Robloxの自動インストールに失敗しました: {ex.Message}");
+                return null;
+            }
+        }
+
+        private void CloseProtocolWindow()
+        {
+            try { protocolWindow?.Close(); } catch { }
+            protocolWindow = null;
+        }
+
+        // RobloxPlayerBeta が1つも動いていない状態が数秒続くまで待つ (再参加などで一瞬途切れても終了しない)
+        private async Task WatchRobloxAsync()
+        {
+            int idleSeconds = 0;
+            while (idleSeconds < 5)
+            {
+                if (FindRunningRobloxBeta() == null) idleSeconds++;
+                else idleSeconds = 0;
+                await Task.Delay(1000);
+            }
+            AddLog("Robloxが終了したため、ランチャーも終了します。");
+        }
+
+        private void InitTray()
+        {
+            bool isJa = GetEffectiveLanguage() == "ja";
+            var menu = new System.Windows.Forms.ContextMenuStrip();
+            menu.Items.Add(isJa ? "ランチャーを開く" : "Open Launcher", null, (_, __) => Dispatcher.Invoke(ShowFromTray));
+            menu.Items.Add(isJa ? "Robloxを起動" : "Launch Roblox", null, (_, __) => Dispatcher.Invoke(() => LaunchRobloxClient("", bypass: false)));
+            menu.Items.Add(new System.Windows.Forms.ToolStripSeparator());
+            menu.Items.Add(isJa ? "終了" : "Exit", null, (_, __) => Dispatcher.Invoke(() => Application.Current.Shutdown()));
+
+            trayIcon = new System.Windows.Forms.NotifyIcon
+            {
+                Icon = LoadAppIcon(),
+                Text = "AZQLAUNCHER",
+                ContextMenuStrip = menu,
+                Visible = true
+            };
+            trayIcon.DoubleClick += (_, __) => Dispatcher.Invoke(ShowFromTray);
+
+            // 終了時にアイコンが残らないようにする
+            Application.Current.Exit += (_, __) =>
+            {
+                if (trayIcon != null)
+                {
+                    trayIcon.Visible = false;
+                    trayIcon.Dispose();
+                    trayIcon = null;
+                }
+            };
+        }
+
+        private void SetTrayStatus(bool robloxRunning)
+        {
+            if (trayIcon == null) return;
+            bool isJa = GetEffectiveLanguage() == "ja";
+            trayIcon.Text = robloxRunning
+                ? (isJa ? "AZQLAUNCHER - Roblox実行中" : "AZQLAUNCHER - Roblox running")
+                : "AZQLAUNCHER";
+        }
+
+        private void ShowFromTray()
+        {
+            ShowInTaskbar = true;
+            Show();
+            WindowState = WindowState.Normal;
+            Activate();
+        }
+
+        // exeに埋め込んだアプリアイコンを使う。取得できなければ描画で代用する。
+        private System.Drawing.Icon LoadAppIcon()
+        {
+            try
+            {
+                string? exe = Environment.ProcessPath;
+                if (!string.IsNullOrEmpty(exe))
+                {
+                    var icon = System.Drawing.Icon.ExtractAssociatedIcon(exe);
+                    if (icon != null) return icon;
+                }
+            }
+            catch { }
+            return CreateTrayIcon();
+        }
+
+        private System.Drawing.Icon CreateTrayIcon()
+        {
+            using var bmp = new Bitmap(32, 32);
+            using (var g = Graphics.FromImage(bmp))
+            {
+                g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+                g.Clear(System.Drawing.Color.Transparent);
+                g.TranslateTransform(16, 16);
+                g.RotateTransform(14);
+                var rect = new RectangleF(-12, -12, 24, 24);
+                using (var brush = new System.Drawing.Drawing2D.LinearGradientBrush(rect, System.Drawing.Color.FromArgb(61, 107, 255), System.Drawing.Color.FromArgb(139, 92, 255), 45f))
+                {
+                    g.FillRectangle(brush, rect);
+                }
+                using (var hole = new SolidBrush(System.Drawing.Color.FromArgb(12, 14, 22)))
+                {
+                    g.FillRectangle(hole, -4f, -4f, 8f, 8f);
+                }
+            }
+            IntPtr hIcon = bmp.GetHicon();
+            try
+            {
+                using var tmp = System.Drawing.Icon.FromHandle(hIcon);
+                return (System.Drawing.Icon)tmp.Clone();
+            }
+            finally
+            {
+                DestroyIcon(hIcon);
             }
         }
 
@@ -1615,6 +1820,172 @@ namespace AZQLAUNCHER
             }
         }
 
+        // ===== 以前のバージョンからのデータ引っ越し =====
+
+        private static string NormalizeDir(string path) => Path.GetFullPath(path).TrimEnd('\\', '/');
+
+        private string? FindPreviousInstall()
+        {
+            try
+            {
+                string baseDir = NormalizeDir(AppDomain.CurrentDomain.BaseDirectory);
+                string? parent = Path.GetDirectoryName(baseDir);
+                if (parent == null) return null;
+
+                return Directory.GetDirectories(parent)
+                    .Where(d => !string.Equals(NormalizeDir(d), baseDir, StringComparison.OrdinalIgnoreCase)
+                                && File.Exists(Path.Combine(d, "config.json")))
+                    .OrderByDescending(d => File.GetLastWriteTime(Path.Combine(d, "config.json")))
+                    .FirstOrDefault();
+            }
+            catch { return null; }
+        }
+
+        private static string? ResolvePreviousDir(string dir)
+        {
+            if (File.Exists(Path.Combine(dir, "config.json"))) return dir;
+            try
+            {
+                foreach (string sub in Directory.GetDirectories(dir))
+                {
+                    if (File.Exists(Path.Combine(sub, "config.json"))) return sub;
+                }
+            }
+            catch { }
+            return null;
+        }
+
+        // 以前のフォルダ内を指していたパスは、新しいフォルダ内の同じ場所に付け替える
+        private static string RemapPath(string path, string oldDir, string newDir)
+        {
+            if (string.IsNullOrEmpty(path)) return path;
+            string prefix = oldDir.TrimEnd('\\', '/') + Path.DirectorySeparatorChar;
+            if (path.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+            {
+                return Path.Combine(newDir, path.Substring(prefix.Length));
+            }
+            return path;
+        }
+
+        // 既にあるファイルは上書きしない (同梱アセットを壊さないため)
+        private int CopyMissingFiles(string srcDir, string destDir)
+        {
+            if (!Directory.Exists(srcDir)) return 0;
+            int copied = 0;
+            foreach (string file in Directory.GetFiles(srcDir, "*", SearchOption.AllDirectories))
+            {
+                string dest = Path.Combine(destDir, Path.GetRelativePath(srcDir, file));
+                if (File.Exists(dest)) continue;
+                try
+                {
+                    Directory.CreateDirectory(Path.GetDirectoryName(dest)!);
+                    File.Copy(file, dest);
+                    copied++;
+                }
+                catch (Exception ex)
+                {
+                    AddLog($"引き継ぎコピー失敗: {Path.GetFileName(file)} ({ex.Message})");
+                }
+            }
+            return copied;
+        }
+
+        private void PromptImportOnFirstRun()
+        {
+            string? found = FindPreviousInstall();
+            if (found == null) return;
+
+            bool isJa = GetEffectiveLanguage() == "ja";
+            var answer = MessageBox.Show(
+                isJa ? $"以前のバージョンが見つかりました。\n{found}\n\n設定とデータを引き継ぎますか?"
+                     : $"A previous version was found.\n{found}\n\nImport its settings and data?",
+                "AZQLAUNCHER", MessageBoxButton.YesNo, MessageBoxImage.Question);
+            if (answer == MessageBoxResult.Yes) ImportFromFolder(found);
+        }
+
+        private void ImportData_Click(object sender, RoutedEventArgs e)
+        {
+            bool isJa = GetEffectiveLanguage() == "ja";
+            var dialog = new OpenFolderDialog
+            {
+                Title = isJa ? "以前のバージョンのフォルダ (config.json があるフォルダ) を選択"
+                             : "Select the previous version's folder (the one with config.json)"
+            };
+            string? guess = FindPreviousInstall();
+            if (guess != null) dialog.InitialDirectory = guess;
+            if (dialog.ShowDialog() == true) ImportFromFolder(dialog.FolderName);
+        }
+
+        private void ImportFromFolder(string selected)
+        {
+            bool isJa = GetEffectiveLanguage() == "ja";
+            string baseDir = NormalizeDir(AppDomain.CurrentDomain.BaseDirectory);
+
+            string? srcDir = ResolvePreviousDir(selected);
+            if (srcDir == null)
+            {
+                MessageBox.Show(
+                    isJa ? "選んだフォルダに config.json が見つかりません。以前のバージョンのフォルダを選んでください。"
+                         : "config.json was not found in that folder. Please select the previous version's folder.",
+                    "AZQLAUNCHER", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+            if (string.Equals(NormalizeDir(srcDir), baseDir, StringComparison.OrdinalIgnoreCase))
+            {
+                MessageBox.Show(
+                    isJa ? "現在のランチャーと同じフォルダです。以前のバージョンのフォルダを選んでください。"
+                         : "That is the current launcher's own folder. Please select the previous version's folder.",
+                    "AZQLAUNCHER", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            try
+            {
+                string json = File.ReadAllText(Path.Combine(srcDir, "config.json"));
+                var loaded = JsonSerializer.Deserialize<LauncherConfig>(json);
+                if (loaded == null) throw new InvalidDataException("config.json is empty.");
+
+                int copied = 0;
+                copied += CopyMissingFiles(Path.Combine(srcDir, "Mods"), modsDir);
+                copied += CopyMissingFiles(Path.Combine(srcDir, "Assets"), assetsDir);
+                copied += CopyMissingFiles(Path.Combine(srcDir, "Tools"), toolsDir);
+
+                loaded.DeathSoundPath = RemapPath(loaded.DeathSoundPath, srcDir, baseDir);
+                loaded.CustomCursorPath = RemapPath(loaded.CustomCursorPath, srcDir, baseDir);
+                loaded.SkyboxFolderPath = RemapPath(loaded.SkyboxFolderPath, srcDir, baseDir);
+                loaded.CustomFontPath = RemapPath(loaded.CustomFontPath, srcDir, baseDir);
+                loaded.IsFirstLaunch = false;
+
+                if (File.Exists(configPath)) File.Copy(configPath, configPath + ".bak", true);
+                File.WriteAllText(configPath, JsonSerializer.Serialize(loaded, new JsonSerializerOptions { WriteIndented = true }));
+
+                // 読み込み中に画面の変更イベントで設定が上書きされないよう、一時的に保存を止める
+                isLoaded = false;
+                LoadSettings();
+                ApplyLanguage();
+                isLoaded = true;
+
+                // ブラウザ連携の登録先を、新しい実行ファイルに付け替える
+                if (config.AutoRegisterProtocol) RegisterProtocol(silent: true);
+                else UpdateProtocolStatusText(false);
+                UpdateDashboard();
+
+                AddLog($"以前のバージョンから設定を引き継ぎました: {srcDir} (ファイル {copied} 件をコピー)");
+                MessageBox.Show(
+                    isJa ? $"設定とデータを引き継ぎました。\nコピーしたファイル: {copied} 件"
+                         : $"Settings and data were imported.\nFiles copied: {copied}",
+                    "AZQLAUNCHER", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+            catch (Exception ex)
+            {
+                isLoaded = true;
+                AddLog($"引き継ぎエラー: {ex.Message}");
+                MessageBox.Show(
+                    isJa ? $"引き継ぎに失敗しました。\n{ex.Message}" : $"Import failed.\n{ex.Message}",
+                    "AZQLAUNCHER", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
         private void ShowIntro_Click(object sender, RoutedEventArgs e) => WelcomeOverlay.Visibility = Visibility.Visible;
         private void CloseWelcome_Click(object sender, RoutedEventArgs e) => WelcomeOverlay.Visibility = Visibility.Collapsed;
 
@@ -1627,7 +1998,7 @@ namespace AZQLAUNCHER
             }
             try { this.DragMove(); } catch (InvalidOperationException) { }
         }
-        private void Minimize_Click(object sender, RoutedEventArgs e) => WindowState = WindowState.Minimized;
+        private void Minimize_Click(object sender, RoutedEventArgs e) => Hide(); // トレイに格納
         private void Close_Click(object sender, RoutedEventArgs e) => Application.Current.Shutdown();
     }
 }
