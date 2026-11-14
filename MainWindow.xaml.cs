@@ -92,10 +92,15 @@ namespace AZQLAUNCHER
 
     public partial class MainWindow : Window
     {
-        private readonly string configPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "config.json");
-        private readonly string modsDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Mods");
-        private readonly string assetsDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Assets");
-        private readonly string toolsDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Tools");
+        // アプリ本体のフォルダ (アップデートで置き換わる) と、ユーザーデータの保存先 (アップデートしても残る)
+        private static readonly string appDir = AppDomain.CurrentDomain.BaseDirectory;
+        private static readonly string dataDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "AZQLAUNCHER");
+
+        private readonly string configPath = Path.Combine(dataDir, "config.json");
+        private readonly string modsDir = Path.Combine(dataDir, "Mods");
+        private readonly string assetsDir = Path.Combine(appDir, "Assets");              // 同梱アセット (読み取り専用)
+        private readonly string userAssetsDir = Path.Combine(dataDir, "Assets");         // 自動生成・変換したファイル
+        private readonly string toolsDir = Path.Combine(dataDir, "Tools");
         private LauncherConfig config = new LauncherConfig();
         private bool isLoaded = false;
         private bool isRunningAsProtocol = false;
@@ -103,8 +108,8 @@ namespace AZQLAUNCHER
         private Window? protocolWindow;
         private System.Windows.Forms.NotifyIcon? trayIcon;
 
-        private readonly string logsDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Logs");
-        private readonly string backupsDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Backups");
+        private readonly string logsDir = Path.Combine(dataDir, "Logs");
+        private readonly string backupsDir = Path.Combine(dataDir, "Backups");
         private readonly object logLock = new object();
         private readonly Dictionary<string, HashSet<string>> createdFileCache = new Dictionary<string, HashSet<string>>(StringComparer.OrdinalIgnoreCase);
         private bool isLaunching = false;
@@ -229,13 +234,18 @@ namespace AZQLAUNCHER
         public MainWindow()
         {
             InitializeComponent();
+            bool migrated = MigrateLegacyData();
+            Directory.CreateDirectory(dataDir);
             Directory.CreateDirectory(modsDir);
             Directory.CreateDirectory(assetsDir);
+            Directory.CreateDirectory(userAssetsDir);
             Directory.CreateDirectory(toolsDir);
             Directory.CreateDirectory(logsDir);
             Directory.CreateDirectory(backupsDir);
             CleanupOldLogs();
             AddLog("--- AZQLAUNCHER beta0.0.5 を起動しました ---");
+            AddLog($"データの保存先: {dataDir}");
+            if (migrated) AddLog("旧バージョンのフォルダから設定・Modsなどを引き継ぎました。");
 
             LoadSettings();
             RestoreWindowSize();
@@ -658,6 +668,67 @@ namespace AZQLAUNCHER
             UpdateDashboard();
         }
 
+        // 以前は設定やModsをexeと同じフォルダに保存していた。初回だけ新しい保存先へコピーして引き継ぐ。
+        private bool MigrateLegacyData()
+        {
+            try
+            {
+                Directory.CreateDirectory(dataDir);
+                string legacy = appDir;
+                if (string.Equals(Path.GetFullPath(legacy).TrimEnd('\\'), Path.GetFullPath(dataDir).TrimEnd('\\'), StringComparison.OrdinalIgnoreCase)) return false;
+                if (File.Exists(configPath)) return false;                       // 引き継ぎ済み
+                string oldConfig = Path.Combine(legacy, "config.json");
+                if (!File.Exists(oldConfig)) return false;                       // 新規インストール
+
+                File.Copy(oldConfig, configPath, false);
+                foreach (string name in new[] { "Mods", "Backups", "Tools" })
+                {
+                    string src = Path.Combine(legacy, name);
+                    if (Directory.Exists(src)) CopyPlainDirectory(src, Path.Combine(dataDir, name));
+                }
+                string oldOuch = Path.Combine(legacy, "Assets", "custom_ouch.ogg");
+                if (File.Exists(oldOuch))
+                {
+                    Directory.CreateDirectory(userAssetsDir);
+                    File.Copy(oldOuch, Path.Combine(userAssetsDir, "custom_ouch.ogg"), true);
+                }
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        private static void CopyPlainDirectory(string src, string dst)
+        {
+            Directory.CreateDirectory(dst);
+            foreach (string dir in Directory.GetDirectories(src, "*", SearchOption.AllDirectories))
+                Directory.CreateDirectory(Path.Combine(dst, Path.GetRelativePath(src, dir)));
+            foreach (string file in Directory.GetFiles(src, "*", SearchOption.AllDirectories))
+            {
+                string target = Path.Combine(dst, Path.GetRelativePath(src, file));
+                try { File.Copy(file, target, false); } catch { }
+            }
+        }
+
+        // 保存済みの音声パスがアプリ/データフォルダ内のファイルなら、現在の場所に合わせ直す (フォルダが変わっても切れない)
+        private void FixBundledAssetPaths()
+        {
+            if (string.IsNullOrEmpty(config.DeathSoundPath)) return;
+            try
+            {
+                string? dir = Path.GetDirectoryName(config.DeathSoundPath);
+                if (dir == null || !string.Equals(Path.GetFileName(dir), "Assets", StringComparison.OrdinalIgnoreCase)) return;
+                string file = Path.GetFileName(config.DeathSoundPath);
+                string? target = file.Equals("classic_ouch.ogg", StringComparison.OrdinalIgnoreCase) ? Path.Combine(assetsDir, file)
+                               : file.Equals("custom_ouch.ogg", StringComparison.OrdinalIgnoreCase) ? Path.Combine(userAssetsDir, file)
+                               : null;
+                if (target != null && File.Exists(target)) config.DeathSoundPath = target;
+            }
+            catch { }
+        }
+
         private void LoadSettings()
         {
             if (File.Exists(configPath))
@@ -675,6 +746,7 @@ namespace AZQLAUNCHER
                 }
             }
             config.RecentGames ??= new List<RecentGame>();
+            FixBundledAssetPaths();
 
             foreach (ComboBoxItem item in CmbLanguage.Items)
             {
@@ -1913,8 +1985,8 @@ namespace AZQLAUNCHER
 
             if (config.CursorMode == "System")
             {
-                string sysArrowPng = Path.Combine(assetsDir, "system_arrow.png");
-                string sysIbeamPng = Path.Combine(assetsDir, "system_ibeam.png");
+                string sysArrowPng = Path.Combine(userAssetsDir, "system_arrow.png");
+                string sysIbeamPng = Path.Combine(userAssetsDir, "system_ibeam.png");
                 ExportCurrentWindowsCursorToPng("Arrow", IDC_ARROW, sysArrowPng);
                 ExportCurrentWindowsCursorToPng("IBeam", IDC_IBEAM, sysIbeamPng);
 
@@ -2511,7 +2583,7 @@ namespace AZQLAUNCHER
 
                 DeathSoundPathText.Text = $"「{Path.GetFileName(selectedFile)}」を Roblox用 .ogg へ変換中...";
                 AddLog($"音声変換を開始: {Path.GetFileName(selectedFile)} -> custom_ouch.ogg");
-                string convertedOggPath = Path.Combine(assetsDir, "custom_ouch.ogg");
+                string convertedOggPath = Path.Combine(userAssetsDir, "custom_ouch.ogg");
                 try { if (File.Exists(convertedOggPath)) File.Delete(convertedOggPath); } catch { }
 
                 ProcessStartInfo psi = new ProcessStartInfo
