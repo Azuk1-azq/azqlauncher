@@ -1,8 +1,4 @@
-<!doctype html>
-<html lang="en">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
 <title>AZQLAUNCHER</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <style>
@@ -116,14 +112,10 @@ footer{padding-block:40px 56px;border-top:1px solid var(--line);color:var(--mute
 @media (max-width:440px){.stats{grid-template-columns:minmax(0,1fr)}.win .body{grid-template-columns:minmax(0,1fr);padding:0 8px}.side{display:none}.go>span{flex:1 1 100%}}
 @media (prefers-reduced-motion:no-preference){.btn{transition:filter .15s}}
 </style>
-<style>body{margin:0}</style>
-</head>
-<body>
-
 
 <div class="wrap">
 <header class="top">
-  <div class="logo"><span class="mark"></span>AZQLAUNCHER<span class="badge">beta0.0.3</span></div>
+  <div class="logo"><span class="mark"></span>AZQLAUNCHER<span class="badge">beta0.0.5</span></div>
   <nav class="links" aria-label="Sections">
     <a href="#features"><span class="ja">機能</span><span class="en">Features</span></a>
     <a href="#flags">FastFlags</a>
@@ -143,17 +135,19 @@ footer{padding-block:40px 56px;border-top:1px solid var(--line);color:var(--mute
     <h1><span class="ja">Robloxを、もっと速く。もっと自分らしく。</span><span class="en">Roblox, faster and unmistakably yours.</span></h1>
     <p class="lead"><span class="ja">AZQLAUNCHERは、Robloxを起動する前にFPS上限の解放と描画設定を整え、フォント・スカイボックス・カーソル・死亡音まで好みに差し替えるWindows用ランチャーです。難しい設定ファイルは触りません。ファイルを選んでボタンを押すだけで、次の起動から反映されます。</span><span class="en">AZQLAUNCHER is a Windows launcher that unlocks your frame rate and tunes rendering before Roblox starts, then swaps in your own font, skybox, cursor and death sound. No config files to edit. Pick a file, press a button, and it takes effect on the next launch.</span></p>
     <div class="cta">
-      <a class="btn primary" href="https://github.com/Azuk1-azq/azqlauncher/releases/download/beta0.0.3/azqlauncher.zip"><span class="ja">ダウンロード (beta0.0.3)</span><span class="en">Download (beta0.0.3)</span></a>
+      <a class="btn primary" href="https://github.com/Azuk1-azq/azqlauncher/releases/download/beta0.0.5/azqlauncher.zip"><span class="ja">ダウンロード (beta0.0.5)</span><span class="en">Download (beta0.0.5)</span></a>
       <a class="btn" href="#start"><span class="ja">導入手順を見る</span><span class="en">How to install</span></a>
       <a class="btn" href="https://github.com/Azuk1-azq/azqlauncher/tree/main"><span class="ja">GitHubでソースを見る</span><span class="en">View source on GitHub</span></a>
     </div>
-    <div class="meta"><span class="ja">ソースコードはすべて公開 / 許可リスト内のFastFlagsだけを適用 / Robloxの更新後も自動で再適用 / ワンクリックで標準起動に戻せます</span><span class="en">Fully open source / Only allowlisted FastFlags / re-applied after every Roblox update / one click back to stock</span></div>
+    <div class="meta"><span class="ja">ソースコードはすべて公開 / 許可リスト内のFastFlagsだけを適用 / Robloxの更新後も自動で再適用 / ライト・ダーク両テーマ対応 / ワンクリックで標準起動に戻せます</span><span class="en">Fully open source / Only allowlisted FastFlags / re-applied after every Roblox update / light &amp; dark themes / one click back to stock</span></div>
   </div>
 
   <div class="win" role="img" aria-label="AZQLAUNCHER dashboard">
-    <div class="bar"><div class="logo"><span class="mark"></span>AZQLAUNCHER<span class="badge">beta0.0.3</span></div></div>
+    <div class="bar"><div class="logo"><span class="mark"></span>AZQLAUNCHER<span class="badge">beta0.0.5</span></div></div>
     <div class="body">
       <div class="side">
+        <div style="background:var(--grad);color:#fff;font-weight:700">▶ <span class="ja">Robloxを起動</span><span class="en">Launch Roblox</span></div>
+        <div style="font-size:11px;padding-block:2px"><span style="color:var(--ok)">●</span> <span class="ja">停止中</span><span class="en">Stopped</span></div>
         <div class="on"><span class="ja">ダッシュボード</span><span class="en">Dashboard</span></div>
         <div>FastFlags</div>
         <div><span class="ja">スカイボックス・Mods</span><span class="en">Skybox &amp; Mods</span></div>
@@ -165,7 +159,7 @@ footer{padding-block:40px 56px;border-top:1px solid var(--line);color:var(--mute
           <i class="frame f1"></i><i class="frame f2"></i>
           <div><h3><span class="ja">クイック起動</span><span class="en">Quick Launch</span></h3>
           <p><span class="ja">設定を適用してRobloxを起動します</span><span class="en">Applies your settings, then launches Roblox</span></p></div>
-          <div class="go"><span><span class="ja">Robloxを直接起動</span><span class="en">Launch Roblox</span></span><span><span class="ja">ランチャーを通さないで起動</span><span class="en">Launch Without Launcher</span></span></div>
+          <div class="go"><span><span class="ja">Robloxを直接起動</span><span class="en">Launch Roblox</span></span><span><span class="ja">標準起動 (Modsなし)</span><span class="en">Vanilla Launch</span></span></div>
         </div>
         <div class="stats">
           <div class="stat"><small>Roblox <span class="ja">クライアント</span><span class="en">Client</span></small><strong>version-4ea8e85481e34f…</strong></div>
@@ -184,9 +178,13 @@ footer{padding-block:40px 56px;border-top:1px solid var(--line);color:var(--mute
     <div class="card"><span class="tag">FastFlags</span><h3><span class="ja">FPS上限の解放と描画設定</span><span class="en">FPS unlock and rendering</span></h3><p><span class="ja">目標FPS、PostFXの無効化、レンダリング品質の軽量化、描画API(D3D11 / D3D10 / Vulkan / OpenGL)を画面から選べます。</span><span class="en">Set a target FPS, disable PostFX, lower render quality and pick a graphics API (D3D11, D3D10, Vulkan, OpenGL) from the UI.</span></p></div>
     <div class="card"><span class="tag">Mods</span><h3><span class="ja">見た目と音のカスタマイズ</span><span class="en">Look and sound</span></h3><p><span class="ja">カーソル、死亡時の効果音、スカイボックス、UIフォントを差し替えます。汎用Modsフォルダのファイルもそのままコピーされます。</span><span class="en">Replace the cursor, death sound, skybox and UI font. Anything in the general Mods folder is copied in as well.</span></p></div>
     <div class="card"><span class="tag">Browser</span><h3><span class="ja">ブラウザからそのまま起動</span><span class="en">Launch from the browser</span></h3><p><span class="ja">roblox-player と roblox のURIを登録するので、サイトの「プレイ」ボタンからでもランチャー経由で起動できます。</span><span class="en">Registers the roblox-player and roblox URI schemes, so the Play button on the website goes through the launcher.</span></p></div>
-    <div class="card"><span class="tag">Update</span><h3><span class="ja">Robloxの更新に追従</span><span class="en">Survives Roblox updates</span></h3><p><span class="ja">更新で新しいバージョンフォルダが作られたことを検知し、新しい方へFastFlagsとModsを再適用します。更新中はその旨を表示します。</span><span class="en">Detects the new version folder created by an update and re-applies flags and mods there. It shows an "Updating Roblox" state while it waits.</span></p></div>
-    <div class="card"><span class="tag">Vanilla</span><h3><span class="ja">ワンクリックで標準起動</span><span class="en">One-click vanilla</span></h3><p><span class="ja">「ランチャーを通さないで起動」を押すと、設定ファイルを消して標準のクライアントを起動します。ブラウザ起動時の既定にもできます。</span><span class="en">"Launch Without Launcher" removes the settings file and starts the stock client. You can make it the default for browser launches too.</span></p></div>
+    <div class="card"><span class="tag">Update</span><h3><span class="ja">Robloxの更新に追従</span><span class="en">Survives Roblox updates</span></h3><p><span class="ja">更新で新しいバージョンフォルダが作られたことを検知し、新しい方へFastFlagsとModsを再適用します。更新中はその旨を表示します。上書き前の元ファイルはバックアップされ、「解除」で確実に元へ戻せます。</span><span class="en">Detects the new version folder created by an update and re-applies flags and mods there. It shows an "Updating Roblox" state while it waits. Original files are backed up first, so Clear really restores them.</span></p></div>
+    <div class="card"><span class="tag">Vanilla</span><h3><span class="ja">ワンクリックで標準起動</span><span class="en">One-click vanilla</span></h3><p><span class="ja">「標準起動 (Modsなし)」を押すと、FastFlagsとModsを元に戻して標準のクライアントを起動します。ブラウザ起動時の既定にもできます。</span><span class="en">"Vanilla Launch" restores the original files and starts the stock client. You can make it the default for browser launches too.</span></p></div>
     <div class="card"><span class="tag">UI</span><h3><span class="ja">日本語と英語に対応</span><span class="en">Japanese and English</span></h3><p><span class="ja">表示言語はシステムに合わせて自動で切り替わり、設定から固定もできます。実行ログもアプリ内で確認できます。</span><span class="en">The language follows your system and can be pinned in Settings. A built-in log view shows what happened on each launch.</span></p></div>
+    <div class="card"><span class="tag">Quick Join</span><h3><span class="ja">ゲームURLを貼ってすぐ参加</span><span class="en">Paste a link and join</span></h3><p><span class="ja">ゲームURL・プレイスID・プライベートサーバーのリンクを貼ってEnterで参加できます。最近遊んだ8件は履歴に残ります。</span><span class="en">Paste a game URL, place ID or private server link and press Enter. Your last 8 games are kept as history.</span></p></div>
+    <div class="card"><span class="tag">Theme</span><h3><span class="ja">ライト / ダーク / システム連動</span><span class="en">Light, dark or follow system</span></h3><p><span class="ja">既定はWindowsの設定に追従し、起動中に切り替えても自動で変わります。設定から手動でも選べます。</span><span class="en">Follows Windows by default and switches live while running. You can also pick one manually in Settings.</span></p></div>
+    <div class="card"><span class="tag">Workflow</span><h3><span class="ja">ショートカットと自動保存</span><span class="en">Shortcuts and autosave</span></h3><p><span class="ja">Ctrl+1〜5でページ移動、Ctrl+Enterで起動、Ctrl+Sで保存して反映。FastFlagsの変更は自動保存され、ウィンドウはリサイズでき、サイズも記憶されます。</span><span class="en">Ctrl+1-5 switch pages, Ctrl+Enter launches, Ctrl+S saves and applies. FastFlags autosave, and the window is resizable and remembers its size.</span></p></div>
+    <div class="card"><span class="tag">Logs</span><h3><span class="ja">ログ保存と設定の持ち運び</span><span class="en">Saved logs and portable settings</span></h3><p><span class="ja">ログは日ごとにファイル保存(14日分)。設定のエクスポート/インポートやFPSプリセット(60 / 144 / 240 / 無制限)にも対応しています。</span><span class="en">Logs are saved per day for 14 days. Settings can be exported and imported, and FPS presets (60 / 144 / 240 / unlimited) are built in.</span></p></div>
   </div>
 </section>
 
@@ -208,7 +206,7 @@ footer{padding-block:40px 56px;border-top:1px solid var(--line);color:var(--mute
 
 <section id="mods">
   <h2><span class="ja">フォントもスカイボックスも、ボタンひとつ</span><span class="en">One button for fonts, skyboxes and more</span></h2>
-  <p class="sub"><span class="ja">ファイルかフォルダを選ぶだけです。ファイルの置き場所やRobloxの内部フォルダを自分で探す必要はありません。選んだものは設定に保存され、起動のたびに自動で適用されます。</span><span class="en">Pick a file or a folder and you are done. No digging through Roblox's internal folders. Your choice is saved and applied on every launch.</span></p>
+  <p class="sub"><span class="ja">ファイルかフォルダを選ぶだけです。ファイルの置き場所やRobloxの内部フォルダを自分で探す必要はありません。選んだものは設定に保存され、起動のたびに自動で適用されます(変更は次回の起動時に反映されます)。</span><span class="en">Pick a file or a folder and you are done. No digging through Roblox's internal folders. Your choice is saved and applied on every launch (changes take effect on the next launch).</span></p>
   <div class="grid" style="margin-bottom:40px">
     <div class="card"><span class="tag"><span class="ja">フォント</span><span class="en">Font</span></span><span class="pill"><span class="ja">フォントファイルを選択</span><span class="en">Select Font File</span></span><p style="margin-top:14px"><span class="ja">.ttf か .otf を1つ選ぶと、Robloxが使う主要なUIフォント(Source Sans Pro、Gotham、Builder Sans)がすべてそのフォントに置き換わります。</span><span class="en">Choose one .ttf or .otf and it replaces every main UI font Roblox uses (Source Sans Pro, Gotham and Builder Sans).</span></p></div>
     <div class="card"><span class="tag"><span class="ja">スカイボックス</span><span class="en">Skybox</span></span><span class="pill"><span class="ja">スカイボックスフォルダを選択</span><span class="en">Select Skybox Folder</span></span><p style="margin-top:14px"><span class="ja">bk, dn, ft, lf, rt, up で終わる名前の6枚を入れたフォルダを選びます。面ごとに正しい場所へ自動でコピーされます。</span><span class="en">Choose a folder with six images whose names end in bk, dn, ft, lf, rt and up. Each face is copied to the right place for you.</span></p></div>
@@ -245,7 +243,7 @@ footer{padding-block:40px 56px;border-top:1px solid var(--line);color:var(--mute
     <div>
       <h2><span class="ja">ダウンロードして使う</span><span class="en">Download and run</span></h2>
       <p class="sub"><span class="ja">Windows 10/11 と .NET 8 ランタイムが必要です。Robloxは先にインストールしておいてください。zipを展開して AZQLAUNCHER.exe を起動すれば使えます。</span><span class="en">Needs Windows 10 or 11 and the .NET 8 runtime. Install Roblox first. Unzip the archive and run AZQLAUNCHER.exe.</span></p>
-      <p style="margin:0 0 36px"><a class="btn primary" href="https://github.com/Azuk1-azq/azqlauncher/releases/download/beta0.0.3/azqlauncher.zip"><span class="ja">azqlauncher.zip をダウンロード</span><span class="en">Download azqlauncher.zip</span></a></p>
+      <p style="margin:0 0 36px"><a class="btn primary" href="https://github.com/Azuk1-azq/azqlauncher/releases/download/beta0.0.5/azqlauncher.zip"><span class="ja">azqlauncher.zip をダウンロード</span><span class="en">Download azqlauncher.zip</span></a></p>
       <h3 style="font:700 17px var(--font-display);margin:0 0 14px"><span class="ja">ソースからビルドする場合</span><span class="en">Or build from source</span></h3>
       <ol class="steps">
         <li><span><span class="ja">リポジトリのフォルダでビルドします。</span><span class="en">Build from the project folder.</span></span></li>
@@ -268,7 +266,7 @@ config.json  Mods\  Assets\  Tools\</pre>
 </section>
 
 <footer>
-  <div class="logo"><span class="mark"></span>AZQLAUNCHER<span class="badge">beta0.0.3</span></div>
+  <div class="logo"><span class="mark"></span>AZQLAUNCHER<span class="badge">beta0.0.5</span></div>
   <div><a href="https://github.com/Azuk1-azq/azqlauncher/tree/main">GitHub</a> · <span class="ja">Windows 10/11 · .NET 8 · WPF</span><span class="en">Windows 10/11 · .NET 8 · WPF</span></div>
 </footer>
 </div>
@@ -285,5 +283,4 @@ config.json  Mods\  Assets\  Tools\</pre>
 })();
 </script>
 
-</body>
-</html>
+</body></html>
