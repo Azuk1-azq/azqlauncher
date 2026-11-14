@@ -21,6 +21,14 @@ using System.Windows.Media;
 
 namespace AZQLAUNCHER
 {
+    public class GameSuggestion
+    {
+        public string Name { get; set; } = "";
+        public string PlaceId { get; set; } = "";
+        public long Players { get; set; }
+        public string PlayersText => Players > 0 ? $"👥 {Players:N0}" : "";
+    }
+
     public class RecentGame
     {
         public string PlaceId { get; set; } = "";
@@ -75,7 +83,7 @@ namespace AZQLAUNCHER
         public bool CleanClientSettings { get; set; } = true;
 
         public string Theme { get; set; } = "System";   // System / Dark / Light
-        public bool MinimizeToTray { get; set; } = false;
+        public bool MinimizeToTray { get; set; } = true;
         public double WindowWidth { get; set; } = 0;
         public double WindowHeight { get; set; } = 0;
 
@@ -379,7 +387,7 @@ namespace AZQLAUNCHER
             LblLaunchSectionTitle.Text = isJa ? "起動の動作" : "Launch Behavior";
             ChkMinimizeToTray.Content = isJa ? "最小化したときトレイに格納する" : "Hide to tray when minimized";
             DescAutoClose.Text = isJa ? "起動後はウィンドウを隠してトレイに常駐し、Roblox の終了と同時にランチャーも終了します。" : "Hides to the tray after launch and exits together with Roblox.";
-            DescMinimizeToTray.Text = isJa ? "オフ: 最小化するとタスクバーに残ります。オン: トレイに格納します。" : "Off: stays on the taskbar. On: hides to the tray.";
+            DescMinimizeToTray.Text = isJa ? "オン (既定): 最小化するとトレイに格納します。オフ: タスクバーに残ります。" : "On (default): hides to the tray. Off: stays on the taskbar.";
             DescBypassLauncher.Text = isJa ? "ブラウザ (roblox.com) から参加するときも FastFlags / Mods を適用しません。" : "Skips FastFlags and Mods when joining from the browser.";
             DescCleanClientSettings.Text = isJa ? "起動前に ClientAppSettings.json を作り直し、削除した設定が残らないようにします (推奨)。" : "Rebuilds ClientAppSettings.json before launch so removed flags don't linger (recommended).";
             DescProtectCursor.Text = isJa ? "Roblox が起動直後にカーソルを上書きしても、数秒間再適用して維持します。" : "Re-applies your cursor for a few seconds in case Roblox overwrites it at startup.";
@@ -391,8 +399,10 @@ namespace AZQLAUNCHER
 
             LblQuickJoinTitle.Text = isJa ? "クイック参加" : "Quick Join";
             LblQuickJoinHint.Text = isJa
-                ? "ゲームのURL・プレイスID・プライベートサーバーのリンクを貼り付けて Enter"
-                : "Paste a game URL, place ID or private server link, then press Enter";
+                ? "ゲーム名 (日本語・英語OK) を入力するだけで、候補から選んで直接参加できます。URL・プレイスID・プライベートサーバーのリンクも使えます"
+                : "Just type a game name (any language) and pick it from the suggestions to join instantly. URLs, place IDs and private server links work too.";
+            LblQuickJoinBadge.Text = isJa ? "ゲーム名を入れるだけ" : "Just type the name";
+            LblQuickJoinPlaceholder.Text = isJa ? "ゲーム名を入力 (例: Blox Fruits / ブロックスフルーツ)" : "Type a game name (e.g. Blox Fruits)";
             BtnQuickJoin.Content = isJa ? "参加" : "Join";
             LblRecentTitle.Text = isJa ? "最近のゲーム (右クリックで履歴から削除)" : "Recent games (right-click to remove)";
             BtnCancelLaunch.Content = isJa ? "キャンセル" : "Cancel";
@@ -3069,6 +3079,13 @@ namespace AZQLAUNCHER
 
         private void QuickJoin_Click(object sender, RoutedEventArgs e)
         {
+            string typed = TxtQuickJoin.Text.Trim();
+            if (LooksLikeGameName(typed))
+            {
+                _ = JoinByNameAsync(typed);
+                return;
+            }
+
             if (!TryParseJoinInput(TxtQuickJoin.Text, out RecentGame? game, out string error) || game == null)
             {
                 QuickJoinStatusText.Text = error;
@@ -3106,6 +3123,229 @@ namespace AZQLAUNCHER
             LaunchRobloxClient(BuildJoinUri(game), bypass: false);
 
             if (string.IsNullOrEmpty(game.Name)) _ = ResolvePlaceNameAsync(game.PlaceId);
+        }
+
+        // ---------------- ゲーム名で検索して参加 ----------------
+
+        private CancellationTokenSource? suggestCts;
+        private bool suppressSuggest;
+        private readonly string searchSessionId = Guid.NewGuid().ToString();
+
+        // URL・数字ID・ランチャー用リンクでなければ「ゲーム名」として扱う
+        private static bool LooksLikeGameName(string s)
+        {
+            s = s.Trim();
+            if (s.Length < 2) return false;
+            if (Regex.IsMatch(s, @"^\d+$")) return false;
+            if (s.Contains("://") || s.StartsWith("roblox:", StringComparison.OrdinalIgnoreCase)) return false;
+            if (s.Contains("roblox.com", StringComparison.OrdinalIgnoreCase)) return false;
+            if (s.Contains("placeId=", StringComparison.OrdinalIgnoreCase)) return false;
+            return true;
+        }
+
+        private async Task<List<GameSuggestion>> SearchGamesAsync(string query, CancellationToken ct)
+        {
+            var result = new List<GameSuggestion>();
+            var seen = new HashSet<string>();
+
+            void Add(string? name, long placeId, long players)
+            {
+                if (string.IsNullOrWhiteSpace(name) || placeId <= 0) return;
+                if (!seen.Add(placeId.ToString())) return;
+                result.Add(new GameSuggestion { Name = name!, PlaceId = placeId.ToString(), Players = players });
+            }
+
+            static long GetLong(JsonElement el, string prop)
+            {
+                if (el.ValueKind == JsonValueKind.Object && el.TryGetProperty(prop, out JsonElement v))
+                {
+                    if (v.ValueKind == JsonValueKind.Number && v.TryGetInt64(out long n)) return n;
+                    if (v.ValueKind == JsonValueKind.String && long.TryParse(v.GetString(), out long m)) return m;
+                }
+                return 0;
+            }
+
+            // 1) 現在のRoblox検索API (omni-search)
+            try
+            {
+                string url = "https://apis.roblox.com/search-api/omni-search?searchQuery=" + Uri.EscapeDataString(query)
+                           + "&pageToken=&sessionId=" + searchSessionId + "&pageType=all";
+                string json = await Http.GetStringAsync(url, ct);
+                using var doc = JsonDocument.Parse(json);
+                if (doc.RootElement.TryGetProperty("searchResults", out JsonElement groups) && groups.ValueKind == JsonValueKind.Array)
+                {
+                    foreach (JsonElement group in groups.EnumerateArray())
+                    {
+                        if (!group.TryGetProperty("contents", out JsonElement contents) || contents.ValueKind != JsonValueKind.Array) continue;
+                        foreach (JsonElement c in contents.EnumerateArray())
+                        {
+                            if (c.TryGetProperty("contentType", out JsonElement t) && t.ValueKind == JsonValueKind.String
+                                && !string.Equals(t.GetString(), "Game", StringComparison.OrdinalIgnoreCase)) continue;
+                            string? name = c.TryGetProperty("name", out JsonElement n) && n.ValueKind == JsonValueKind.String ? n.GetString() : null;
+                            Add(name, GetLong(c, "rootPlaceId"), GetLong(c, "playerCount"));
+                            if (result.Count >= 8) return result;
+                        }
+                    }
+                }
+            }
+            catch (OperationCanceledException) { throw; }
+            catch { /* 次の方法へ */ }
+
+            // 2) 旧API (予備)
+            if (result.Count == 0)
+            {
+                try
+                {
+                    string url = "https://games.roblox.com/v1/games/list?model.keyword=" + Uri.EscapeDataString(query) + "&model.maxRows=10";
+                    string json = await Http.GetStringAsync(url, ct);
+                    using var doc = JsonDocument.Parse(json);
+                    if (doc.RootElement.TryGetProperty("games", out JsonElement games) && games.ValueKind == JsonValueKind.Array)
+                    {
+                        foreach (JsonElement g in games.EnumerateArray())
+                        {
+                            string? name = g.TryGetProperty("name", out JsonElement n) && n.ValueKind == JsonValueKind.String ? n.GetString() : null;
+                            Add(name, GetLong(g, "placeId"), GetLong(g, "playerCount"));
+                            if (result.Count >= 8) break;
+                        }
+                    }
+                }
+                catch (OperationCanceledException) { throw; }
+                catch { }
+            }
+
+            return result;
+        }
+
+        // 検索中は候補欄の位置に「読み込み中…」とスピナーを出す
+        private void ShowLoading()
+        {
+            LblSuggestLoading.Text = GetEffectiveLanguage() == "ja" ? "読み込み中…" : "Loading…";
+            SuggestList.ItemsSource = null;
+            SuggestList.Visibility = Visibility.Collapsed;
+            SuggestLoadingRow.Visibility = Visibility.Visible;
+            QuickJoinStatusText.Text = "";
+            SuggestPanel.Visibility = Visibility.Visible;
+        }
+
+        private void ShowSuggestions(List<GameSuggestion> list)
+        {
+            bool isJa = GetEffectiveLanguage() == "ja";
+            SuggestLoadingRow.Visibility = Visibility.Collapsed;
+            SuggestList.Visibility = Visibility.Visible;
+            if (list.Count == 0)
+            {
+                SuggestPanel.Visibility = Visibility.Collapsed;
+                QuickJoinStatusText.Text = isJa ? "該当するゲームが見つかりませんでした。別の名前やURLを試してください。" : "No matching games found. Try another name or a URL.";
+                return;
+            }
+            QuickJoinStatusText.Text = "";
+            SuggestList.ItemsSource = list;
+            SuggestList.SelectedIndex = 0;
+            SuggestPanel.Visibility = Visibility.Visible;
+        }
+
+        private async void TxtQuickJoin_TextChanged(object sender, TextChangedEventArgs e)
+        {
+            if (suppressSuggest || QuickJoinStatusText == null) return;
+            QuickJoinStatusText.Text = "";
+            suggestCts?.Cancel();
+
+            string q = TxtQuickJoin.Text.Trim();
+            if (!LooksLikeGameName(q))
+            {
+                SuggestPanel.Visibility = Visibility.Collapsed;
+                return;
+            }
+
+            var cts = new CancellationTokenSource();
+            suggestCts = cts;
+            ShowLoading();
+            try
+            {
+                await Task.Delay(350, cts.Token); // 入力が止まってから検索
+                var list = await SearchGamesAsync(q, cts.Token);
+                if (cts.IsCancellationRequested || !TxtQuickJoin.IsKeyboardFocused) return;
+                ShowSuggestions(list);
+            }
+            catch (OperationCanceledException) { }
+            catch { SuggestPanel.Visibility = Visibility.Collapsed; }
+        }
+
+        private void TxtQuickJoin_PreviewKeyDown(object sender, KeyEventArgs e)
+        {
+            if (!(SuggestPanel.Visibility == Visibility.Visible)) return;
+            int count = SuggestList.Items.Count;
+            if (e.Key == Key.Down)
+            {
+                SuggestList.SelectedIndex = Math.Min(count - 1, SuggestList.SelectedIndex + 1);
+                SuggestList.ScrollIntoView(SuggestList.SelectedItem);
+                e.Handled = true;
+            }
+            else if (e.Key == Key.Up)
+            {
+                SuggestList.SelectedIndex = Math.Max(0, SuggestList.SelectedIndex - 1);
+                SuggestList.ScrollIntoView(SuggestList.SelectedItem);
+                e.Handled = true;
+            }
+            else if (e.Key == Key.Escape)
+            {
+                SuggestPanel.Visibility = Visibility.Collapsed;
+                e.Handled = true;
+            }
+        }
+
+        private void TxtQuickJoin_LostKeyboardFocus(object sender, KeyboardFocusChangedEventArgs e)
+        {
+            SuggestPanel.Visibility = Visibility.Collapsed;
+        }
+
+        private void SuggestItem_MouseDown(object sender, MouseButtonEventArgs e)
+        {
+            e.Handled = true; // ウィンドウのドラッグ移動を防ぐ
+            if (sender is ListBoxItem item && item.DataContext is GameSuggestion s) JoinSuggestion(s);
+        }
+
+        private void JoinSuggestion(GameSuggestion s)
+        {
+            suggestCts?.Cancel();
+            SuggestPanel.Visibility = Visibility.Collapsed;
+            suppressSuggest = true;
+            TxtQuickJoin.Clear();
+            suppressSuggest = false;
+            QuickJoinStatusText.Text = "";
+            StartQuickJoin(new RecentGame { PlaceId = s.PlaceId, Name = s.Name });
+        }
+
+        // 「参加」ボタン / Enter でゲーム名が入力されていたとき
+        private async Task JoinByNameAsync(string query)
+        {
+            bool isJa = GetEffectiveLanguage() == "ja";
+
+            // 候補が表示されていれば、選択中のゲームに参加
+            if ((SuggestPanel.Visibility == Visibility.Visible) && SuggestList.SelectedItem is GameSuggestion sel)
+            {
+                JoinSuggestion(sel);
+                return;
+            }
+
+            // 候補が無い (Escで閉じた / 検索前) 場合は検索して候補を出す。誤って参加しないよう、ここでは参加しない
+            suggestCts?.Cancel();
+            var cts = new CancellationTokenSource();
+            suggestCts = cts;
+            TxtQuickJoin.Focus();
+            ShowLoading();
+            try
+            {
+                var list = await SearchGamesAsync(query, cts.Token);
+                if (cts.IsCancellationRequested) return;
+                ShowSuggestions(list);
+            }
+            catch (OperationCanceledException) { }
+            catch
+            {
+                SuggestPanel.Visibility = Visibility.Collapsed;
+                QuickJoinStatusText.Text = isJa ? "検索に失敗しました。ネットワークを確認するか、URLを貼り付けてください。" : "Search failed. Check your connection or paste a URL instead.";
+            }
         }
 
         private void RecentGame_Click(object sender, RoutedEventArgs e)
@@ -3194,7 +3434,7 @@ namespace AZQLAUNCHER
             if (e.ChangedButton != MouseButton.Left || e.ButtonState != MouseButtonState.Pressed) return;
             for (DependencyObject? d = e.OriginalSource as DependencyObject; d != null; d = (d is Visual || d is System.Windows.Media.Media3D.Visual3D) ? VisualTreeHelper.GetParent(d) : LogicalTreeHelper.GetParent(d))
             {
-                if (d is System.Windows.Controls.Primitives.TextBoxBase || d is System.Windows.Controls.Primitives.ScrollBar || d is System.Windows.Controls.Primitives.ButtonBase || d is ComboBoxItem || d is System.Windows.Controls.Primitives.Popup) return;
+                if (d is System.Windows.Controls.Primitives.TextBoxBase || d is System.Windows.Controls.Primitives.ScrollBar || d is System.Windows.Controls.Primitives.ButtonBase || d is ComboBoxItem || d is ListBoxItem || d is System.Windows.Controls.Primitives.Popup) return;
             }
             try { this.DragMove(); } catch (InvalidOperationException) { }
         }
