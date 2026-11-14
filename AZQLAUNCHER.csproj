@@ -7,8 +7,8 @@
     <UseWPF>true</UseWPF>
     <UseWindowsForms>true</UseWindowsForms>
     <ApplicationIcon>Assets\app.ico</ApplicationIcon>
-    <Version>0.0.3</Version>
-    <InformationalVersion>beta0.0.3</InformationalVersion>
+    <Version>0.0.5</Version>
+    <InformationalVersion>beta0.0.5</InformationalVersion>
   </PropertyGroup>
 
   <ItemGroup>

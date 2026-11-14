@@ -4,13 +4,14 @@
         Title="AZQLAUNCHER" Icon="Assets/app.ico" Height="652" Width="992"
         FontFamily="Segoe UI Variable Text, Segoe UI, Yu Gothic UI, Meiryo UI" TextOptions.TextFormattingMode="Ideal"
         WindowStyle="None" AllowsTransparency="True" Background="Transparent"
-        WindowStartupLocation="CenterScreen" MouseDown="Window_MouseDown">
+        WindowStartupLocation="CenterScreen" MouseDown="Window_MouseDown" PreviewKeyDown="Window_PreviewKeyDown" SizeChanged="Window_SizeChanged"
+        ResizeMode="CanResize" MinWidth="860" MinHeight="600">
 
-    <Border Margin="16" CornerRadius="16" BorderBrush="#FF262C42" BorderThickness="1">
+    <Border Margin="16" CornerRadius="16" BorderBrush="{DynamicResource LineBrush}" BorderThickness="1">
         <Border.Background>
             <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
-                <GradientStop Color="#FF121626" Offset="0"/>
-                <GradientStop Color="#FF0C0E16" Offset="1"/>
+                <GradientStop Color="{DynamicResource WinBg1Color}" Offset="0"/>
+                <GradientStop Color="{DynamicResource WinBg2Color}" Offset="1"/>
             </LinearGradientBrush>
         </Border.Background>
         <Border.Effect>
@@ -32,15 +33,15 @@
                                 <RotateTransform Angle="14"/>
                             </Border.RenderTransform>
                         </Border>
-                        <Border Width="8" Height="8" CornerRadius="2" Background="#FF0C0E16" RenderTransformOrigin="0.5,0.5">
+                        <Border Width="8" Height="8" CornerRadius="2" Background="{DynamicResource LogoHoleBrush}" RenderTransformOrigin="0.5,0.5">
                             <Border.RenderTransform>
                                 <RotateTransform Angle="14"/>
                             </Border.RenderTransform>
                         </Border>
                     </Grid>
-                    <TextBlock Text="AZQLAUNCHER" Foreground="White" FontFamily="Bahnschrift, Segoe UI" FontSize="18" FontWeight="SemiBold" VerticalAlignment="Center"/>
-                    <Border Background="#FF222842" CornerRadius="6" Padding="7,2" Margin="12,1,0,0" VerticalAlignment="Center">
-                        <TextBlock Text="beta0.0.3" Foreground="#FF8FA6FF" FontSize="11" FontWeight="SemiBold"/>
+                    <TextBlock Text="AZQLAUNCHER" Foreground="{DynamicResource TextBrush}" FontFamily="Bahnschrift, Segoe UI" FontSize="18" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                    <Border Background="{DynamicResource SurfaceRaisedBrush}" CornerRadius="6" Padding="7,2" Margin="12,1,0,0" VerticalAlignment="Center">
+                        <TextBlock Text="beta0.0.5" Foreground="{DynamicResource AccentTextBrush}" FontSize="11" FontWeight="SemiBold"/>
                     </Border>
                 </StackPanel>
 
@@ -58,19 +59,30 @@
                 </Grid.ColumnDefinitions>
 
                 <!-- サイドバーメニュー -->
-                <StackPanel Grid.Column="0" Margin="0,10,14,0">
-                    <Button x:Name="NavDashboard" Tag="Active" Content="🎮 ダッシュボード" Style="{StaticResource MenuButton}" Height="44" Margin="0,0,0,4" Click="Nav_Click"/>
-                    <Button x:Name="NavFastFlags" Content="⚡ FastFlags" Style="{StaticResource MenuButton}" Height="44" Margin="0,0,0,4" Click="Nav_Click"/>
-                    <Button x:Name="NavMods" Content="🎨 スカイボックス・Mods" Style="{StaticResource MenuButton}" Height="44" Margin="0,0,0,4" Click="Nav_Click"/>
-                    <Button x:Name="NavLogs" Content="📜 ログ" Style="{StaticResource MenuButton}" Height="44" Margin="0,0,0,4" Click="Nav_Click"/>
-                    <Button x:Name="NavSettings" Content="⚙️ 設定" Style="{StaticResource MenuButton}" Height="44" Margin="0,0,0,4" Click="Nav_Click"/>
-                </StackPanel>
+                <Grid Grid.Column="0" Margin="0,10,14,0">
+                    <StackPanel VerticalAlignment="Top">
+                        <Button x:Name="NavDashboard" Tag="Active" Content="🎮 ダッシュボード" Style="{StaticResource MenuButton}" Height="44" Margin="0,0,0,4" Click="Nav_Click"/>
+                        <Button x:Name="NavFastFlags" Content="⚡ FastFlags" Style="{StaticResource MenuButton}" Height="44" Margin="0,0,0,4" Click="Nav_Click"/>
+                        <Button x:Name="NavMods" Content="🎨 スカイボックス・Mods" Style="{StaticResource MenuButton}" Height="44" Margin="0,0,0,4" Click="Nav_Click"/>
+                        <Button x:Name="NavLogs" Content="📜 ログ" Style="{StaticResource MenuButton}" Height="44" Margin="0,0,0,4" Click="Nav_Click"/>
+                        <Button x:Name="NavSettings" Content="⚙️ 設定" Style="{StaticResource MenuButton}" Height="44" Margin="0,0,0,4" Click="Nav_Click"/>
+                    </StackPanel>
+                    <StackPanel VerticalAlignment="Bottom">
+                        <Border Style="{StaticResource Card}" Padding="12,10" Margin="0,0,0,10">
+                            <StackPanel Orientation="Horizontal">
+                                <Ellipse x:Name="StatusDot" Width="9" Height="9" Fill="{DynamicResource TextMutedBrush}" VerticalAlignment="Center" Margin="0,0,9,0"/>
+                                <TextBlock x:Name="SidebarStatusText" Text="Roblox" Foreground="{DynamicResource TextSoftBrush}" FontSize="12" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
+                            </StackPanel>
+                        </Border>
+                        <Button x:Name="BtnSidebarLaunch" Content="▶ 起動" Style="{StaticResource PrimaryButton}" Height="46" FontSize="14" Click="LaunchRoblox_Click"/>
+                    </StackPanel>
+                </Grid>
 
                 <!-- コンテンツエリア -->
-                <Border Grid.Column="1" Background="#CC101320" CornerRadius="14" BorderBrush="#FF222842" BorderThickness="1" Padding="26">
+                <Border Grid.Column="1" Background="{DynamicResource ContentBgBrush}" CornerRadius="14" BorderBrush="{DynamicResource SurfaceRaisedBrush}" BorderThickness="1" Padding="26">
                     <Grid>
                         <!-- ================= DASHBOARD ================= -->
-                        <Grid x:Name="PageDashboard" Visibility="Visible">
+                        <ScrollViewer x:Name="PageDashboard" Visibility="Visible" VerticalScrollBarVisibility="Auto">
                             <StackPanel>
                                 <Border CornerRadius="16" Padding="30,28" ClipToBounds="True" BorderThickness="1" BorderBrush="#FF2A3150">
                                     <Border.Background>
@@ -82,7 +94,7 @@
                                     </Border.Background>
                                     <Grid>
                                         <Canvas Width="300" Height="220" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,-70,0" IsHitTestVisible="False">
-                                            <Border Canvas.Left="120" Canvas.Top="14" Width="170" Height="170" BorderThickness="24" CornerRadius="8" Opacity="0.55" RenderTransformOrigin="0.5,0.5" BorderBrush="{StaticResource AccentGradient}">
+                                            <Border Canvas.Left="109" Canvas.Top="10" Width="170" Height="170" BorderThickness="24" CornerRadius="8" Opacity="0.55" RenderTransformOrigin="0.5,0.5" BorderBrush="{StaticResource AccentGradient}">
                                                 <Border.RenderTransform>
                                                     <RotateTransform Angle="15"/>
                                                 </Border.RenderTransform>
@@ -113,25 +125,44 @@
                                     </Grid.ColumnDefinitions>
                                     <Border Grid.Column="0" Style="{StaticResource Card}" Padding="16" Margin="0,0,6,0">
                                         <StackPanel>
-                                            <TextBlock x:Name="LblDashClientTitle" Text="Roblox クライアント" Foreground="#FF8E97B5" FontSize="12"/>
-                                            <TextBlock x:Name="DashClientText" Text="-" Foreground="White" FontSize="15" FontWeight="SemiBold" Margin="0,7,0,0" TextTrimming="CharacterEllipsis"/>
+                                            <TextBlock x:Name="LblDashClientTitle" Text="Roblox クライアント" Foreground="{DynamicResource TextMutedBrush}" FontSize="12"/>
+                                            <TextBlock x:Name="DashClientText" Text="-" Foreground="{DynamicResource TextBrush}" FontSize="15" FontWeight="SemiBold" Margin="0,7,0,0" TextTrimming="CharacterEllipsis"/>
                                         </StackPanel>
                                     </Border>
                                     <Border Grid.Column="1" Style="{StaticResource Card}" Padding="16" Margin="6,0,6,0">
                                         <StackPanel>
-                                            <TextBlock x:Name="LblDashFlagsTitle" Text="FastFlags" Foreground="#FF8E97B5" FontSize="12"/>
-                                            <TextBlock x:Name="DashFlagsText" Text="-" Foreground="White" FontSize="15" FontWeight="SemiBold" Margin="0,7,0,0"/>
+                                            <TextBlock x:Name="LblDashFlagsTitle" Text="FastFlags" Foreground="{DynamicResource TextMutedBrush}" FontSize="12"/>
+                                            <TextBlock x:Name="DashFlagsText" Text="-" Foreground="{DynamicResource TextBrush}" FontSize="15" FontWeight="SemiBold" Margin="0,7,0,0"/>
                                         </StackPanel>
                                     </Border>
                                     <Border Grid.Column="2" Style="{StaticResource Card}" Padding="16" Margin="6,0,0,0">
                                         <StackPanel>
-                                            <TextBlock x:Name="LblDashModsTitle" Text="Mods" Foreground="#FF8E97B5" FontSize="12"/>
-                                            <TextBlock x:Name="DashModsText" Text="-" Foreground="White" FontSize="15" FontWeight="SemiBold" Margin="0,7,0,0"/>
+                                            <TextBlock x:Name="LblDashModsTitle" Text="Mods" Foreground="{DynamicResource TextMutedBrush}" FontSize="12"/>
+                                            <TextBlock x:Name="DashModsText" Text="-" Foreground="{DynamicResource TextBrush}" FontSize="15" FontWeight="SemiBold" Margin="0,7,0,0"/>
                                         </StackPanel>
                                     </Border>
                                 </Grid>
+
+                                <!-- クイック参加 -->
+                                <Border Style="{StaticResource Card}" Padding="16" Margin="0,16,0,0">
+                                    <StackPanel>
+                                        <TextBlock x:Name="LblQuickJoinTitle" Text="クイック参加" Foreground="{DynamicResource TextBrush}" FontSize="15" FontWeight="SemiBold"/>
+                                        <TextBlock x:Name="LblQuickJoinHint" Text="ゲームのURL・プレイスID・プライベートサーバーのリンクを貼り付けて Enter" Foreground="{DynamicResource TextMutedBrush}" FontSize="12" Margin="0,4,0,10" TextWrapping="Wrap"/>
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                            </Grid.ColumnDefinitions>
+                                            <TextBox x:Name="TxtQuickJoin" Grid.Column="0" Height="38" Padding="10,9" KeyDown="TxtQuickJoin_KeyDown"/>
+                                            <Button x:Name="BtnQuickJoin" Grid.Column="1" Content="参加" Style="{StaticResource PrimaryButton}" Width="96" Height="38" Margin="10,0,0,0" Click="QuickJoin_Click"/>
+                                        </Grid>
+                                        <TextBlock x:Name="QuickJoinStatusText" Text="" Foreground="{DynamicResource ErrBrush}" FontSize="12" Margin="0,8,0,0" TextWrapping="Wrap"/>
+                                        <TextBlock x:Name="LblRecentTitle" Text="最近のゲーム" Foreground="{DynamicResource TextMutedBrush}" FontSize="12" Margin="0,12,0,0"/>
+                                        <WrapPanel x:Name="RecentGamesPanel" Margin="0,8,0,0"/>
+                                    </StackPanel>
+                                </Border>
                             </StackPanel>
-                        </Grid>
+                        </ScrollViewer>
 
                         <!-- ================= FASTFLAGS ================= -->
                         <Grid x:Name="PageFastFlags" Visibility="Collapsed">
@@ -142,12 +173,12 @@
 
                             <Grid Grid.Row="0" Margin="0,0,0,15">
                                 <StackPanel>
-                                    <TextBlock x:Name="LblFastFlagsTitle" Text="FastFlags" Foreground="White" FontSize="22" FontWeight="Bold"/>
-                                    <TextBlock x:Name="LblFastFlagsSub" Text="ホワイトリスト準拠の安全なクライアント設定" Foreground="#FF8E97B5" FontSize="12" Margin="0,2,0,0"/>
+                                    <TextBlock x:Name="LblFastFlagsTitle" Text="FastFlags" Foreground="{DynamicResource TextBrush}" FontSize="22" FontWeight="Bold"/>
+                                    <TextBlock x:Name="LblFastFlagsSub" Text="ホワイトリスト準拠の安全なクライアント設定" Foreground="{DynamicResource TextMutedBrush}" FontSize="12" Margin="0,2,0,0"/>
                                 </StackPanel>
                                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
-                                    <Button x:Name="BtnResetFastFlags" Content="リセット" Style="{StaticResource SecondaryButton}" Height="36" Margin="0,0,8,0" Click="ResetFastFlags_Click"/>
-                                    <Button x:Name="BtnSaveFastFlags" Content="💾 設定を保存" Style="{StaticResource PrimaryButton}" Height="36" Width="130" Click="SaveFastFlags_Click"/>
+                                    <TextBlock x:Name="FastFlagsSaveStatusText" Text="" Foreground="{DynamicResource InfoBrush}" FontSize="12" VerticalAlignment="Center" Margin="0,0,12,0"/>
+                                    <Button x:Name="BtnResetFastFlags" Content="リセット" Style="{StaticResource SecondaryButton}" Height="36" Click="ResetFastFlags_Click"/>
                                 </StackPanel>
                             </Grid>
 
@@ -155,29 +186,48 @@
                                 <StackPanel Margin="0,0,10,0">
                                     <Border Style="{StaticResource Card}" Margin="0,0,0,12">
                                         <StackPanel>
-                                            <TextBlock x:Name="LblPerfCardTitle" Text="パフォーマンス・フレームレート" Foreground="White" FontSize="15" FontWeight="SemiBold" Margin="0,0,0,12"/>
+                                            <TextBlock x:Name="LblPerfCardTitle" Text="パフォーマンス・フレームレート" Foreground="{DynamicResource TextBrush}" FontSize="15" FontWeight="SemiBold" Margin="0,0,0,12"/>
 
                                             <CheckBox x:Name="ChkUnlockFPS" Content="FPS上限を解放する" Margin="0,0,0,10" Checked="FastFlagUi_Changed" Unchecked="FastFlagUi_Changed"/>
 
                                             <StackPanel Orientation="Horizontal" Margin="24,0,0,12">
-                                                <TextBlock x:Name="LblTargetFps" Text="目標FPS上限:" Foreground="#FFB4BBD6" FontSize="13" VerticalAlignment="Center" Margin="0,0,10,0"/>
-                                                <TextBox x:Name="TxtTargetFps" Width="90" Height="28" Background="#FF0E1019" Foreground="White" BorderBrush="#FF2E3552" BorderThickness="1" Padding="6,3" Text="9999" TextChanged="FastFlagUi_Changed"/>
+                                                <TextBlock x:Name="LblTargetFps" Text="目標FPS上限:" Foreground="{DynamicResource TextSoftBrush}" FontSize="13" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                                                <TextBox x:Name="TxtTargetFps" Width="90" Height="28" Background="{DynamicResource InputBrush}" Foreground="{DynamicResource TextBrush}" BorderBrush="{DynamicResource LineStrongBrush}" BorderThickness="1" Padding="6,3" Text="9999" TextChanged="FastFlagUi_Changed" LostFocus="TxtTargetFps_LostFocus"/>
+                                                <Button Content="60" Tag="60" Style="{StaticResource SecondaryButton}" Height="28" Padding="10,0" Margin="10,0,0,0" FontSize="12" Click="FpsPreset_Click"/>
+                                                <Button Content="144" Tag="144" Style="{StaticResource SecondaryButton}" Height="28" Padding="10,0" Margin="6,0,0,0" FontSize="12" Click="FpsPreset_Click"/>
+                                                <Button Content="240" Tag="240" Style="{StaticResource SecondaryButton}" Height="28" Padding="10,0" Margin="6,0,0,0" FontSize="12" Click="FpsPreset_Click"/>
+                                                <Button x:Name="BtnFpsUnlimited" Content="無制限" Tag="9999" Style="{StaticResource SecondaryButton}" Height="28" Padding="10,0" Margin="6,0,0,0" FontSize="12" Click="FpsPreset_Click"/>
                                             </StackPanel>
 
                                             <CheckBox x:Name="ChkDisablePostFx" Content="PostFX (ブルーム・被写界深度等の重いエフェクト) を無効化" Margin="0,0,0,10" Checked="FastFlagUi_Changed" Unchecked="FastFlagUi_Changed"/>
                                             <CheckBox x:Name="ChkLowRenderQuality" Content="レンダリング品質を軽量化 (FRM品質レベル1固定)" Checked="FastFlagUi_Changed" Unchecked="FastFlagUi_Changed"/>
+                                            <TextBlock x:Name="LblFlagNote" Text="" Foreground="{DynamicResource TextMutedBrush}" FontSize="11" Margin="0,12,0,0" TextWrapping="Wrap"/>
                                         </StackPanel>
                                     </Border>
 
                                     <Border Style="{StaticResource Card}" Margin="0,0,0,12">
                                         <StackPanel>
-                                            <TextBlock x:Name="LblGraphicsCardTitle" Text="グラフィックス・レンダリング" Foreground="White" FontSize="15" FontWeight="SemiBold" Margin="0,0,0,12"/>
+                                            <TextBlock x:Name="LblLargeCardTitle" Text="大人数サーバー向けの軽量化" Foreground="{DynamicResource TextBrush}" FontSize="15" FontWeight="SemiBold" Margin="0,0,0,6"/>
+                                            <TextBlock x:Name="LblLargeNote" Text="" Foreground="{DynamicResource TextMutedBrush}" FontSize="12" Margin="0,0,0,12" TextWrapping="Wrap"/>
+                                            <Button x:Name="BtnLargePreset" Content="⚡ 大人数向けプリセットを適用" Style="{StaticResource PrimaryButton}" Height="34" HorizontalAlignment="Left" Padding="14,0" Margin="0,0,0,12" Click="LargeServerPreset_Click"/>
+                                            <CheckBox x:Name="ChkLowTexture" Content="テクスチャ品質を最低にする" Margin="0,0,0,8" Checked="FastFlagUi_Changed" Unchecked="FastFlagUi_Changed"/>
+                                            <CheckBox x:Name="ChkDisableMsaa" Content="アンチエイリアス (MSAA) を切る" Margin="0,0,0,8" Checked="FastFlagUi_Changed" Unchecked="FastFlagUi_Changed"/>
+                                            <CheckBox x:Name="ChkReduceGrass" Content="草の描画をなくす" Margin="0,0,0,8" Checked="FastFlagUi_Changed" Unchecked="FastFlagUi_Changed"/>
+                                            <CheckBox x:Name="ChkAggressiveLod" Content="遠くのモデルを早めに簡略化する" Margin="0,0,0,8" Checked="FastFlagUi_Changed" Unchecked="FastFlagUi_Changed"/>
+                                            <CheckBox x:Name="ChkPauseVoxelizer" Content="ライティングの更新を停止" Margin="0,0,0,8" Checked="FastFlagUi_Changed" Unchecked="FastFlagUi_Changed"/>
+                                            <CheckBox x:Name="ChkHighPriority" Content="RobloxのCPU優先度を高にする" Checked="FastFlagUi_Changed" Unchecked="FastFlagUi_Changed"/>
+                                        </StackPanel>
+                                    </Border>
+
+                                    <Border Style="{StaticResource Card}" Margin="0,0,0,12">
+                                        <StackPanel>
+                                            <TextBlock x:Name="LblGraphicsCardTitle" Text="グラフィックス・レンダリング" Foreground="{DynamicResource TextBrush}" FontSize="15" FontWeight="SemiBold" Margin="0,0,0,12"/>
                                             <Grid>
                                                 <Grid.ColumnDefinitions>
                                                     <ColumnDefinition Width="180"/>
                                                     <ColumnDefinition Width="*"/>
                                                 </Grid.ColumnDefinitions>
-                                                <TextBlock x:Name="LblGraphicsApi" Grid.Column="0" Text="描画エンジン (API):" Foreground="#FFB4BBD6" FontSize="13" VerticalAlignment="Center"/>
+                                                <TextBlock x:Name="LblGraphicsApi" Grid.Column="0" Text="描画エンジン (API):" Foreground="{DynamicResource TextSoftBrush}" FontSize="13" VerticalAlignment="Center"/>
                                                 <ComboBox x:Name="CmbGraphicsApi" Grid.Column="1" Width="200" Height="30" HorizontalAlignment="Left" SelectionChanged="FastFlagUi_SelectionChanged">
                                                     <ComboBoxItem x:Name="CmbApiAuto" Content="自動 (デフォルト)" Tag="Auto"/>
                                                     <ComboBoxItem Content="Direct3D 11" Tag="D3D11"/>
@@ -191,19 +241,47 @@
 
                                     <Border Style="{StaticResource Card}">
                                         <StackPanel>
-                                            <Grid Margin="0,0,0,8">
-                                                <TextBlock x:Name="LblCustomFlagsTitle" Text="カスタム FastFlags (JSONエディタ)" Foreground="White" FontSize="15" FontWeight="SemiBold" VerticalAlignment="Center"/>
-                                                <Button x:Name="BtnFormatJson" Content="JSON整形" Style="{StaticResource SecondaryButton}" Padding="8,4" FontSize="11" HorizontalAlignment="Right" Click="FormatJson_Click"/>
+                                            <Grid Margin="0,0,0,6">
+                                                <TextBlock x:Name="LblCustomFlagsTitle" Text="フラグ管理" Foreground="{DynamicResource TextBrush}" FontSize="15" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                                                    <TextBlock Text="🔍" Foreground="{DynamicResource TextMutedBrush}" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                                                    <TextBox x:Name="TxtFlagSearch" Width="170" Height="28" Padding="6,3" TextChanged="TxtFlagSearch_TextChanged"/>
+                                                </StackPanel>
                                             </Grid>
+                                            <TextBlock x:Name="LblFlagMgrHint" Text="" Foreground="{DynamicResource TextMutedBrush}" FontSize="12" Margin="0,0,0,10" TextWrapping="Wrap"/>
 
-                                            <TextBox x:Name="TxtCustomFlags" Height="130" Background="#FF0E1019" Foreground="#FF00E676" FontFamily="Consolas" FontSize="12"
-                                                     Padding="10" BorderBrush="#FF2E3552" BorderThickness="1" AcceptsReturn="True" VerticalScrollBarVisibility="Auto"
-                                                     Text="{}{&#x0a;  &quot;DFIntTaskSchedulerTargetFps&quot;: 240&#x0a;}" TextChanged="TxtCustomFlags_TextChanged"/>
+                                            <StackPanel x:Name="FlagListPanel"/>
+                                            <TextBlock x:Name="FlagEmptyText" Text="" Foreground="{DynamicResource TextMutedBrush}" FontSize="12" Margin="0,4,0,8"/>
 
-                                            <Grid Margin="0,8,0,0">
-                                                <TextBlock x:Name="JsonStatusText" Text="JSONステータス: 正常" Foreground="#FF00B894" FontSize="12" VerticalAlignment="Center"/>
-                                                <TextBlock x:Name="FastFlagsSaveStatusText" Text="" Foreground="#FF74B9FF" FontSize="12" HorizontalAlignment="Right" VerticalAlignment="Center"/>
-                                            </Grid>
+                                            <Border BorderBrush="{DynamicResource LineBrush}" BorderThickness="0,1,0,0" Padding="0,12,0,0" Margin="0,6,0,0">
+                                                <StackPanel>
+                                                    <TextBlock x:Name="LblAddFlagTitle" Text="フラグを追加" Foreground="{DynamicResource TextSoftBrush}" FontSize="13" FontWeight="SemiBold" Margin="0,0,0,8"/>
+                                                    <Grid>
+                                                        <Grid.ColumnDefinitions>
+                                                            <ColumnDefinition Width="*"/>
+                                                            <ColumnDefinition Width="Auto"/>
+                                                            <ColumnDefinition Width="Auto"/>
+                                                        </Grid.ColumnDefinitions>
+                                                        <ComboBox x:Name="CmbAddFlag" Grid.Column="0" Height="30" Margin="0,0,8,0" SelectionChanged="CmbAddFlag_SelectionChanged"/>
+                                                        <TextBox x:Name="TxtAddFlagValue" Grid.Column="1" Width="90" Height="30" Padding="6,3" Margin="0,0,8,0" KeyDown="AddFlag_KeyDown"/>
+                                                        <Button x:Name="BtnAddFlag" Grid.Column="2" Content="追加" Style="{StaticResource PrimaryButton}" Height="30" Padding="14,0" Click="BtnAddFlag_Click"/>
+                                                    </Grid>
+                                                    <TextBox x:Name="TxtAddFlagName" Height="30" Padding="6,3" Margin="0,8,0,0" FontFamily="Consolas" KeyDown="AddFlag_KeyDown"/>
+                                                    <TextBlock x:Name="LblAddFlagDesc" Text="" Foreground="{DynamicResource TextMutedBrush}" FontSize="12" Margin="0,8,0,0" TextWrapping="Wrap"/>
+                                                </StackPanel>
+                                            </Border>
+
+                                            <Button x:Name="BtnToggleJson" Content="{}  JSONを直接編集 ▼" Style="{StaticResource SecondaryButton}" Padding="10,5" FontSize="12" HorizontalAlignment="Left" Margin="0,14,0,0" Click="ToggleJson_Click"/>
+                                            <StackPanel x:Name="JsonEditorPanel" Visibility="Collapsed" Margin="0,10,0,0">
+                                                <Grid Margin="0,0,0,8">
+                                                    <TextBlock x:Name="LblJsonEditorTitle" Text="JSONエディタ (上のリストと同期します)" Foreground="{DynamicResource TextSoftBrush}" FontSize="12" VerticalAlignment="Center"/>
+                                                    <Button x:Name="BtnFormatJson" Content="JSON整形" Style="{StaticResource SecondaryButton}" Padding="8,4" FontSize="11" HorizontalAlignment="Right" Click="FormatJson_Click"/>
+                                                </Grid>
+                                                <TextBox x:Name="TxtCustomFlags" Height="130" Background="{DynamicResource InputBrush}" Foreground="{DynamicResource OkBrightBrush}" FontFamily="Consolas" FontSize="12"
+                                                         Padding="10" BorderBrush="{DynamicResource LineStrongBrush}" BorderThickness="1" AcceptsReturn="True" VerticalScrollBarVisibility="Auto"
+                                                         Text="{}{&#x0a;  &quot;DFIntTaskSchedulerTargetFps&quot;: 240&#x0a;}" TextChanged="TxtCustomFlags_TextChanged"/>
+                                                <TextBlock x:Name="JsonStatusText" Text="JSONステータス: 正常" Foreground="{DynamicResource OkBrush}" FontSize="12" Margin="0,8,0,0"/>
+                                            </StackPanel>
                                         </StackPanel>
                                     </Border>
                                 </StackPanel>
@@ -213,14 +291,15 @@
                         <!-- ================= MODS & SKYBOX ================= -->
                         <ScrollViewer x:Name="PageMods" Visibility="Collapsed" VerticalScrollBarVisibility="Auto">
                             <StackPanel Margin="0,0,10,0">
-                                <TextBlock x:Name="LblModsTitle" Text="カーソル・死亡音・スカイボックス・Mods" Foreground="White" FontSize="22" FontWeight="Bold" Margin="0,0,0,15"/>
+                                <TextBlock x:Name="LblModsTitle" Text="カーソル・死亡音・スカイボックス・Mods" Foreground="{DynamicResource TextBrush}" FontSize="22" FontWeight="Bold" Margin="0,0,0,4"/>
+                                <TextBlock x:Name="LblModsNote" Text="変更は次回のRoblox起動時に反映されます。" Foreground="{DynamicResource TextMutedBrush}" FontSize="12" Margin="0,0,0,15" TextWrapping="Wrap"/>
 
                                 <CheckBox x:Name="ChkEnableMods" Content="カスタムMods・外観変更をRoblox起動時に自動適用する" FontWeight="Bold" Margin="0,0,0,15" Checked="Setting_Changed" Unchecked="Setting_Changed"/>
 
                                 <!-- カーソル設定カード -->
                                 <Border Style="{StaticResource Card}" Margin="0,0,0,12">
                                     <StackPanel>
-                                        <TextBlock x:Name="LblCursorTitle" Text="🖱️ マウスカーソル" Foreground="White" FontSize="15" FontWeight="SemiBold" Margin="0,0,0,10"/>
+                                        <TextBlock x:Name="LblCursorTitle" Text="🖱️ マウスカーソル" Foreground="{DynamicResource TextBrush}" FontSize="15" FontWeight="SemiBold" Margin="0,0,0,10"/>
 
                                         <RadioButton x:Name="RbCursorSystem" GroupName="CursorMode" Content="マウスカーソルそのまま (Windowsで設定している現在のカーソルを使用)" Margin="0,0,0,8" Checked="CursorMode_Changed"/>
                                         <RadioButton x:Name="RbCursorDefault" GroupName="CursorMode" Content="Roblox標準カーソル" Margin="0,0,0,8" Checked="CursorMode_Changed"/>
@@ -230,7 +309,7 @@
                                         <StackPanel x:Name="CustomCursorFilePanel" Orientation="Horizontal" Margin="22,0,0,0">
                                             <Button x:Name="BtnSelectCursor" Content="カーソル画像 (.png) を選択" Style="{StaticResource SecondaryButton}" Click="SelectCursor_Click"/>
                                             <Button x:Name="BtnClearCursor" Content="解除" Style="{StaticResource SecondaryButton}" Margin="8,0,0,0" Click="ClearCursor_Click"/>
-                                            <TextBlock x:Name="CursorPathText" Text="未設定" Foreground="#FFB4BBD6" FontSize="12" VerticalAlignment="Center" Margin="12,0,0,0"/>
+                                            <TextBlock x:Name="CursorPathText" Text="未設定" Foreground="{DynamicResource TextSoftBrush}" FontSize="12" VerticalAlignment="Center" Margin="12,0,0,0"/>
                                         </StackPanel>
                                     </StackPanel>
                                 </Border>
@@ -238,24 +317,24 @@
                                 <!-- 死亡音設定カード -->
                                 <Border Style="{StaticResource Card}" Margin="0,0,0,12">
                                     <StackPanel>
-                                        <TextBlock x:Name="LblSoundTitle" Text="🔊 死亡時の効果音 (Oof / 任意の音声自動変換)" Foreground="White" FontSize="15" FontWeight="SemiBold" Margin="0,0,0,8"/>
+                                        <TextBlock x:Name="LblSoundTitle" Text="🔊 死亡時の効果音 (Oof / 任意の音声自動変換)" Foreground="{DynamicResource TextBrush}" FontSize="15" FontWeight="SemiBold" Margin="0,0,0,8"/>
                                         <StackPanel Orientation="Horizontal">
                                             <Button x:Name="BtnClassicOof" Content="クラシック Oof 音を設定" Style="{StaticResource PrimaryButton}" Click="SetClassicOof_Click"/>
                                             <Button x:Name="BtnSelectDeathSound" Content="音声ファイルを選択 (.mp3 / .wav / .ogg等)" Style="{StaticResource SecondaryButton}" Margin="8,0,0,0" Click="SelectDeathSound_Click"/>
                                             <Button x:Name="BtnClearSound" Content="解除" Style="{StaticResource SecondaryButton}" Margin="8,0,0,0" Click="ClearDeathSound_Click"/>
                                         </StackPanel>
-                                        <TextBlock x:Name="DeathSoundPathText" Text="現在の設定: 未設定 (Roblox標準)" Foreground="#FFB4BBD6" FontSize="12" Margin="0,8,0,0" TextWrapping="Wrap"/>
+                                        <TextBlock x:Name="DeathSoundPathText" Text="現在の設定: 未設定 (Roblox標準)" Foreground="{DynamicResource TextSoftBrush}" FontSize="12" Margin="0,8,0,0" TextWrapping="Wrap"/>
                                     </StackPanel>
                                 </Border>
 
                                 <!-- スカイボックス設定カード -->
                                 <Border Style="{StaticResource Card}" Margin="0,0,0,12">
                                     <StackPanel>
-                                        <TextBlock x:Name="LblSkyTitle" Text="🌌 カスタム スカイボックス (bk, dn, ft, lf, rt, up)" Foreground="White" FontSize="15" FontWeight="SemiBold" Margin="0,0,0,8"/>
+                                        <TextBlock x:Name="LblSkyTitle" Text="🌌 カスタム スカイボックス (bk, dn, ft, lf, rt, up)" Foreground="{DynamicResource TextBrush}" FontSize="15" FontWeight="SemiBold" Margin="0,0,0,8"/>
                                         <StackPanel Orientation="Horizontal">
                                             <Button x:Name="BtnSelectSky" Content="スカイボックスフォルダを選択" Style="{StaticResource SecondaryButton}" Click="SelectSkybox_Click"/>
                                             <Button x:Name="BtnClearSky" Content="解除" Style="{StaticResource SecondaryButton}" Margin="8,0,0,0" Click="ClearSkybox_Click"/>
-                                            <TextBlock x:Name="SkyboxPathText" Text="未設定" Foreground="#FFB4BBD6" FontSize="12" VerticalAlignment="Center" Margin="12,0,0,0"/>
+                                            <TextBlock x:Name="SkyboxPathText" Text="未設定" Foreground="{DynamicResource TextSoftBrush}" FontSize="12" VerticalAlignment="Center" Margin="12,0,0,0"/>
                                         </StackPanel>
                                     </StackPanel>
                                 </Border>
@@ -263,11 +342,11 @@
                                 <!-- フォント設定カード -->
                                 <Border Style="{StaticResource Card}" Margin="0,0,0,12">
                                     <StackPanel>
-                                        <TextBlock x:Name="LblFontTitle" Text="🔤 カスタム フォント (.ttf / .otf)" Foreground="White" FontSize="15" FontWeight="SemiBold" Margin="0,0,0,8"/>
+                                        <TextBlock x:Name="LblFontTitle" Text="🔤 カスタム フォント (.ttf / .otf)" Foreground="{DynamicResource TextBrush}" FontSize="15" FontWeight="SemiBold" Margin="0,0,0,8"/>
                                         <StackPanel Orientation="Horizontal">
                                             <Button x:Name="BtnSelectFont" Content="フォントファイルを選択" Style="{StaticResource SecondaryButton}" Click="SelectFont_Click"/>
                                             <Button x:Name="BtnClearFont" Content="解除" Style="{StaticResource SecondaryButton}" Margin="8,0,0,0" Click="ClearFont_Click"/>
-                                            <TextBlock x:Name="FontPathText" Text="未設定" Foreground="#FFB4BBD6" FontSize="12" VerticalAlignment="Center" Margin="12,0,0,0"/>
+                                            <TextBlock x:Name="FontPathText" Text="未設定" Foreground="{DynamicResource TextSoftBrush}" FontSize="12" VerticalAlignment="Center" Margin="12,0,0,0"/>
                                         </StackPanel>
                                     </StackPanel>
                                 </Border>
@@ -275,7 +354,7 @@
                                 <!-- 汎用Modsフォルダ -->
                                 <Border Style="{StaticResource Card}">
                                     <StackPanel>
-                                        <TextBlock x:Name="LblModsFolderTitle" Text="📁 汎用 Mods フォルダ" Foreground="White" FontSize="15" FontWeight="SemiBold" Margin="0,0,0,8"/>
+                                        <TextBlock x:Name="LblModsFolderTitle" Text="📁 汎用 Mods フォルダ" Foreground="{DynamicResource TextBrush}" FontSize="15" FontWeight="SemiBold" Margin="0,0,0,8"/>
                                         <Button x:Name="BtnOpenMods" Content="Modsフォルダを開く" Style="{StaticResource SecondaryButton}" Width="180" HorizontalAlignment="Left" Click="OpenModsFolder_Click"/>
                                     </StackPanel>
                                 </Border>
@@ -290,57 +369,108 @@
                             </Grid.RowDefinitions>
 
                             <Grid Grid.Row="0" Margin="0,0,0,12">
-                                <TextBlock x:Name="LblLogsTitle" Text="実行ログ" Foreground="White" FontSize="22" FontWeight="Bold" VerticalAlignment="Center"/>
+                                <TextBlock x:Name="LblLogsTitle" Text="実行ログ" Foreground="{DynamicResource TextBrush}" FontSize="22" FontWeight="Bold" VerticalAlignment="Center"/>
                                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-                                    <Button x:Name="BtnClearLogs" Content="ログをクリア" Style="{StaticResource SecondaryButton}" Margin="0,0,8,0" Click="ClearLogs_Click"/>
-                                    <Button x:Name="BtnOpenRobloxLogs" Content="Robloxログフォルダを開く" Style="{StaticResource SecondaryButton}" Click="OpenRobloxLogsFolder_Click"/>
+                                    <Button x:Name="BtnCopyLogs" Content="コピー" Style="{StaticResource SecondaryButton}" Margin="0,0,8,0" Click="CopyLogs_Click"/>
+                                    <Button x:Name="BtnClearLogs" Content="クリア" Style="{StaticResource SecondaryButton}" Margin="0,0,8,0" Click="ClearLogs_Click"/>
+                                    <Button x:Name="BtnOpenRobloxLogs" Content="📂 Robloxログ" Style="{StaticResource SecondaryButton}" Margin="0,0,8,0" Click="OpenRobloxLogsFolder_Click"/>
+                                    <Button x:Name="BtnOpenLauncherLogs" Content="📂 ランチャーログ" Style="{StaticResource SecondaryButton}" Click="OpenLauncherLogsFolder_Click"/>
                                 </StackPanel>
                             </Grid>
 
-                            <TextBox x:Name="TxtLogs" Grid.Row="1" Background="#FF0E1019" Foreground="#FFB4BBD6" FontFamily="Consolas" FontSize="12"
-                                     Padding="12" BorderBrush="#FF2E3552" BorderThickness="1" IsReadOnly="True" TextWrapping="Wrap"
+                            <TextBox x:Name="TxtLogs" Grid.Row="1" Background="{DynamicResource InputBrush}" Foreground="{DynamicResource TextSoftBrush}" FontFamily="Consolas" FontSize="12"
+                                     Padding="12" BorderBrush="{DynamicResource LineStrongBrush}" BorderThickness="1" IsReadOnly="True" TextWrapping="Wrap"
                                      VerticalScrollBarVisibility="Auto"/>
                         </Grid>
 
                         <!-- ================= SETTINGS ================= -->
                         <ScrollViewer x:Name="PageSettings" Visibility="Collapsed" VerticalScrollBarVisibility="Auto">
                             <StackPanel Margin="0,0,10,0">
-                                <TextBlock x:Name="LblSettingsTitle" Text="ランチャー設定" Foreground="White" FontSize="22" FontWeight="Bold" Margin="0,0,0,15"/>
+                                <TextBlock x:Name="LblSettingsTitle" Text="ランチャー設定" Foreground="{DynamicResource TextBrush}" FontSize="22" FontWeight="Bold" Margin="0,0,0,15"/>
 
-                                <StackPanel Orientation="Horizontal" Margin="0,0,0,18">
-                                    <TextBlock x:Name="LblLanguage" Text="表示言語 (Language):" Foreground="White" FontSize="14" VerticalAlignment="Center" Margin="0,0,15,0"/>
-                                    <ComboBox x:Name="CmbLanguage" Width="220" Height="32" SelectionChanged="CmbLanguage_SelectionChanged">
-                                        <ComboBoxItem x:Name="CmbLangSystem" Content="システム言語 (自動)" Tag="System"/>
-                                        <ComboBoxItem Content="日本語 (Japanese)" Tag="ja"/>
-                                        <ComboBoxItem Content="English (英語)" Tag="en"/>
-                                    </ComboBox>
-                                </StackPanel>
-
-                                <CheckBox x:Name="ChkBypassLauncher" Content="ブラウザから起動時もランチャーを通さないで標準起動する" Margin="0,0,0,14" Checked="Setting_Changed" Unchecked="Setting_Changed"/>
-                                <CheckBox x:Name="ChkProtectCursor" Content="カスタムカーソルの適用を維持する" Margin="0,0,0,14" Checked="Setting_Changed" Unchecked="Setting_Changed"/>
-                                <CheckBox x:Name="ChkAutoRegisterProtocol" Content="ランチャー起動時にブラウザ連携を自動登録する" Margin="0,0,0,14" Checked="Setting_Changed" Unchecked="Setting_Changed"/>
-                                <CheckBox x:Name="ChkAutoClose" Content="Robloxの起動完了後にランチャーを自動で閉じる" Margin="0,0,0,14" Checked="Setting_Changed" Unchecked="Setting_Changed"/>
-                                <CheckBox x:Name="ChkCleanClientSettings" Content="Roblox起動前に古いClientAppSettingsをクリーンアップする" Margin="0,0,0,20" Checked="Setting_Changed" Unchecked="Setting_Changed"/>
-
-                                <Separator Background="#FF262C42" Margin="0,0,0,15"/>
-
-                                <TextBlock x:Name="LblProtocolTitle" Text="ブラウザ連携 (URIプロトコル)" Foreground="White" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,8"/>
-                                <Border Style="{StaticResource Card}" Padding="14" Margin="0,0,0,20">
+                                <!-- 表示 -->
+                                <Border Style="{StaticResource Card}" Margin="0,0,0,12">
                                     <StackPanel>
-                                        <TextBlock x:Name="ProtocolStatusText" Text="状態: 確認中..." Foreground="#FF00B894" FontSize="13" FontWeight="Bold" Margin="0,0,0,10"/>
+                                        <TextBlock x:Name="LblAppearanceTitle" Text="表示" Foreground="{DynamicResource TextBrush}" FontSize="15" FontWeight="SemiBold" Margin="0,0,0,12"/>
+                                        <Grid Margin="0,0,0,10">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="150"/>
+                                                <ColumnDefinition Width="*"/>
+                                            </Grid.ColumnDefinitions>
+                                            <TextBlock x:Name="LblLanguage" Grid.Column="0" Text="表示言語 (Language):" Foreground="{DynamicResource TextSoftBrush}" FontSize="13" VerticalAlignment="Center"/>
+                                            <ComboBox x:Name="CmbLanguage" Grid.Column="1" Width="260" Height="32" HorizontalAlignment="Left" SelectionChanged="CmbLanguage_SelectionChanged">
+                                                <ComboBoxItem x:Name="CmbLangSystem" Content="システム言語 (自動)" Tag="System"/>
+                                                <ComboBoxItem Content="日本語 (Japanese)" Tag="ja"/>
+                                                <ComboBoxItem Content="English (英語)" Tag="en"/>
+                                            </ComboBox>
+                                        </Grid>
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="150"/>
+                                                <ColumnDefinition Width="*"/>
+                                            </Grid.ColumnDefinitions>
+                                            <TextBlock x:Name="LblTheme" Grid.Column="0" Text="テーマ:" Foreground="{DynamicResource TextSoftBrush}" FontSize="13" VerticalAlignment="Center"/>
+                                            <ComboBox x:Name="CmbTheme" Grid.Column="1" Width="260" Height="32" HorizontalAlignment="Left" SelectionChanged="CmbTheme_SelectionChanged">
+                                                <ComboBoxItem x:Name="CmbThemeSystem" Content="システム設定に合わせる (推奨)" Tag="System"/>
+                                                <ComboBoxItem x:Name="CmbThemeDark" Content="ダーク" Tag="Dark"/>
+                                                <ComboBoxItem x:Name="CmbThemeLight" Content="ライト" Tag="Light"/>
+                                            </ComboBox>
+                                        </Grid>
+                                    </StackPanel>
+                                </Border>
+
+                                <!-- 起動の動作 -->
+                                <Border Style="{StaticResource Card}" Margin="0,0,0,12">
+                                    <StackPanel>
+                                        <TextBlock x:Name="LblLaunchSectionTitle" Text="起動の動作" Foreground="{DynamicResource TextBrush}" FontSize="15" FontWeight="SemiBold" Margin="0,0,0,14"/>
+
+                                        <CheckBox x:Name="ChkAutoClose" Content="Robloxの起動完了後にランチャーを自動で閉じる" Checked="Setting_Changed" Unchecked="Setting_Changed"/>
+                                        <TextBlock x:Name="DescAutoClose" Text="" Foreground="{DynamicResource TextMutedBrush}" FontSize="12" TextWrapping="Wrap" Margin="52,3,0,16"/>
+
+                                        <CheckBox x:Name="ChkMinimizeToTray" Content="最小化したときトレイに格納する" Checked="Setting_Changed" Unchecked="Setting_Changed"/>
+                                        <TextBlock x:Name="DescMinimizeToTray" Text="" Foreground="{DynamicResource TextMutedBrush}" FontSize="12" TextWrapping="Wrap" Margin="52,3,0,16"/>
+
+                                        <CheckBox x:Name="ChkBypassLauncher" Content="ブラウザから起動時もランチャーを通さないで標準起動する" Checked="Setting_Changed" Unchecked="Setting_Changed"/>
+                                        <TextBlock x:Name="DescBypassLauncher" Text="" Foreground="{DynamicResource TextMutedBrush}" FontSize="12" TextWrapping="Wrap" Margin="52,3,0,16"/>
+
+                                        <CheckBox x:Name="ChkCleanClientSettings" Content="Roblox起動前に古いClientAppSettingsをクリーンアップする" Checked="Setting_Changed" Unchecked="Setting_Changed"/>
+                                        <TextBlock x:Name="DescCleanClientSettings" Text="" Foreground="{DynamicResource TextMutedBrush}" FontSize="12" TextWrapping="Wrap" Margin="52,3,0,2"/>
+                                    </StackPanel>
+                                </Border>
+
+                                <!-- カーソル -->
+                                <Border Style="{StaticResource Card}" Margin="0,0,0,12">
+                                    <StackPanel>
+                                        <CheckBox x:Name="ChkProtectCursor" Content="カスタムカーソルの適用を維持する" Checked="Setting_Changed" Unchecked="Setting_Changed"/>
+                                        <TextBlock x:Name="DescProtectCursor" Text="" Foreground="{DynamicResource TextMutedBrush}" FontSize="12" TextWrapping="Wrap" Margin="52,3,0,2"/>
+                                    </StackPanel>
+                                </Border>
+
+                                <!-- ブラウザ連携 -->
+                                <Border Style="{StaticResource Card}" Margin="0,0,0,12">
+                                    <StackPanel>
+                                        <TextBlock x:Name="LblProtocolTitle" Text="ブラウザ連携 (URIプロトコル)" Foreground="{DynamicResource TextBrush}" FontSize="15" FontWeight="SemiBold" Margin="0,0,0,14"/>
+                                        <CheckBox x:Name="ChkAutoRegisterProtocol" Content="ランチャー起動時にブラウザ連携を自動登録する" Checked="Setting_Changed" Unchecked="Setting_Changed"/>
+                                        <TextBlock x:Name="DescAutoRegisterProtocol" Text="" Foreground="{DynamicResource TextMutedBrush}" FontSize="12" TextWrapping="Wrap" Margin="52,3,0,16"/>
+                                        <TextBlock x:Name="ProtocolStatusText" Text="状態: 確認中..." Foreground="{DynamicResource OkBrush}" FontSize="13" FontWeight="Bold" Margin="0,0,0,10"/>
                                         <Button x:Name="BtnReRegisterProtocol" Content="ブラウザ連携を手動で再登録" Style="{StaticResource SecondaryButton}" Width="220" Height="36" HorizontalAlignment="Left" Click="RegisterProtocol_Click"/>
                                     </StackPanel>
                                 </Border>
 
-                                <TextBlock x:Name="LblMaintenanceTitle" Text="メンテナンス・情報" Foreground="White" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,10"/>
-                                <StackPanel Orientation="Horizontal">
-                                    <Button x:Name="BtnOpenRobloxFolder" Content="Robloxのクライアントフォルダを開く" Style="{StaticResource SecondaryButton}" Width="230" Height="38" Click="OpenRobloxFolder_Click"/>
-                                    <Button x:Name="BtnRepairRoblox" Content="ClientSettings・読み取り専用解除" Style="{StaticResource DangerButton}" Width="230" Height="38" Margin="10,0,0,0" Click="RepairRoblox_Click"/>
-                                    <Button x:Name="BtnShowIntro" Content="機能紹介ガイド" Style="{StaticResource SecondaryButton}" Width="140" Height="38" Margin="10,0,0,0" Click="ShowIntro_Click"/>
-                                </StackPanel>
-                                <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
-                                    <Button x:Name="BtnImportData" Content="以前のバージョンから設定を引き継ぐ" Style="{StaticResource SecondaryButton}" Width="280" Height="38" Click="ImportData_Click"/>
-                                </StackPanel>
+                                <!-- メンテナンス -->
+                                <Border Style="{StaticResource Card}">
+                                    <StackPanel>
+                                        <TextBlock x:Name="LblMaintenanceTitle" Text="メンテナンス・情報" Foreground="{DynamicResource TextBrush}" FontSize="15" FontWeight="SemiBold" Margin="0,0,0,12"/>
+                                        <WrapPanel>
+                                            <Button x:Name="BtnOpenRobloxFolder" Content="Robloxのクライアントフォルダを開く" Style="{StaticResource SecondaryButton}" Height="38" Margin="0,0,10,10" Click="OpenRobloxFolder_Click"/>
+                                            <Button x:Name="BtnRestoreMods" Content="Modsを元に戻す" Style="{StaticResource SecondaryButton}" Height="38" Margin="0,0,10,10" Click="RestoreMods_Click"/>
+                                            <Button x:Name="BtnExportSettings" Content="設定をエクスポート" Style="{StaticResource SecondaryButton}" Height="38" Margin="0,0,10,10" Click="ExportSettings_Click"/>
+                                            <Button x:Name="BtnImportSettings" Content="設定をインポート" Style="{StaticResource SecondaryButton}" Height="38" Margin="0,0,10,10" Click="ImportSettings_Click"/>
+                                            <Button x:Name="BtnShowIntro" Content="機能紹介ガイド" Style="{StaticResource SecondaryButton}" Height="38" Margin="0,0,10,10" Click="ShowIntro_Click"/>
+                                            <Button x:Name="BtnRepairRoblox" Content="ClientSettings・読み取り専用解除" Style="{StaticResource DangerButton}" Height="38" Margin="0,0,10,10" Click="RepairRoblox_Click"/>
+                                        </WrapPanel>
+                                    </StackPanel>
+                                </Border>
                             </StackPanel>
                         </ScrollViewer>
                     </Grid>
@@ -348,33 +478,33 @@
             </Grid>
 
             <!-- ================= 初回起動時 機能紹介オーバーレイ ================= -->
-            <Border x:Name="WelcomeOverlay" Grid.RowSpan="2" Background="#E60A0C13" CornerRadius="16" Visibility="Collapsed">
-                <Border Background="#FF171B2A" CornerRadius="12" BorderBrush="#FF2E3552" BorderThickness="1" Width="640" Padding="32" VerticalAlignment="Center" HorizontalAlignment="Center">
+            <Border x:Name="WelcomeOverlay" Grid.RowSpan="2" Background="{DynamicResource OverlayBrush}" CornerRadius="16" Visibility="Collapsed">
+                <Border Background="{DynamicResource SurfaceBrush}" CornerRadius="12" BorderBrush="{DynamicResource LineStrongBrush}" BorderThickness="1" Width="640" Padding="32" VerticalAlignment="Center" HorizontalAlignment="Center">
                     <Border.Effect>
                         <DropShadowEffect BlurRadius="30" ShadowDepth="10" Opacity="0.7" Color="Black"/>
                     </Border.Effect>
                     <StackPanel>
-                        <TextBlock x:Name="LblWelcomeTitle" Text="AZQLAUNCHER へようこそ！" Foreground="White" FontSize="24" FontWeight="ExtraBold" Margin="0,0,0,6"/>
-                        <TextBlock x:Name="LblWelcomeSub" Text="主な機能のご紹介" Foreground="#FF8E97B5" FontSize="13" Margin="0,0,0,20"/>
+                        <TextBlock x:Name="LblWelcomeTitle" Text="AZQLAUNCHER へようこそ！" Foreground="{DynamicResource TextBrush}" FontSize="24" FontWeight="ExtraBold" Margin="0,0,0,6"/>
+                        <TextBlock x:Name="LblWelcomeSub" Text="主な機能のご紹介" Foreground="{DynamicResource TextMutedBrush}" FontSize="13" Margin="0,0,0,20"/>
 
-                        <Border Background="#FF1F2437" CornerRadius="8" Padding="14" Margin="0,0,0,10">
+                        <Border Background="{DynamicResource Surface2Brush}" CornerRadius="8" Padding="14" Margin="0,0,0,10">
                             <StackPanel>
-                                <TextBlock x:Name="LblFeat1Title" Text="⚡ FastFlags ＆ FPS上限解放" Foreground="#FF00E676" FontSize="15" FontWeight="Bold" Margin="0,0,0,4"/>
-                                <TextBlock x:Name="LblFeat1Desc" Text="ホワイトリスト準拠の安全設計で、FPS上限設定や描画エンジンの切り替えが可能です。" Foreground="#FFD5DAEE" FontSize="12" TextWrapping="Wrap"/>
+                                <TextBlock x:Name="LblFeat1Title" Text="⚡ FastFlags ＆ FPS上限解放" Foreground="{DynamicResource OkBrightBrush}" FontSize="15" FontWeight="Bold" Margin="0,0,0,4"/>
+                                <TextBlock x:Name="LblFeat1Desc" Text="ホワイトリスト準拠の安全設計で、FPS上限設定や描画エンジンの切り替えが可能です。" Foreground="{DynamicResource TextBodyBrush}" FontSize="12" TextWrapping="Wrap"/>
                             </StackPanel>
                         </Border>
 
-                        <Border Background="#FF1F2437" CornerRadius="8" Padding="14" Margin="0,0,0,10">
+                        <Border Background="{DynamicResource Surface2Brush}" CornerRadius="8" Padding="14" Margin="0,0,0,10">
                             <StackPanel>
-                                <TextBlock x:Name="LblFeat2Title" Text="🎨 カーソル・死亡音・スカイボックス・フォントのカスタマイズ" Foreground="#FF74B9FF" FontSize="15" FontWeight="Bold" Margin="0,0,0,4"/>
-                                <TextBlock x:Name="LblFeat2Desc" Text="Windowsの現在のカーソル維持、クラシックカーソル、内蔵Oof音や自動OGG変換、スカイボックス・UIフォント変更に対応しています。" Foreground="#FFD5DAEE" FontSize="12" TextWrapping="Wrap"/>
+                                <TextBlock x:Name="LblFeat2Title" Text="🎨 カーソル・死亡音・スカイボックス・フォントのカスタマイズ" Foreground="{DynamicResource InfoBrush}" FontSize="15" FontWeight="Bold" Margin="0,0,0,4"/>
+                                <TextBlock x:Name="LblFeat2Desc" Text="Windowsの現在のカーソル維持、クラシックカーソル、内蔵Oof音や自動OGG変換、スカイボックス・UIフォント変更に対応しています。" Foreground="{DynamicResource TextBodyBrush}" FontSize="12" TextWrapping="Wrap"/>
                             </StackPanel>
                         </Border>
 
-                        <Border Background="#FF1F2437" CornerRadius="8" Padding="14" Margin="0,0,0,22">
+                        <Border Background="{DynamicResource Surface2Brush}" CornerRadius="8" Padding="14" Margin="0,0,0,22">
                             <StackPanel>
-                                <TextBlock x:Name="LblFeat3Title" Text="🌐 ブラウザ連携 ＆ 標準起動切替" Foreground="#FFA29BFE" FontSize="15" FontWeight="Bold" Margin="0,0,0,4"/>
-                                <TextBlock x:Name="LblFeat3Desc" Text="Webブラウザからの直接起動と、ランチャーを通さない標準起動の切り替えに対応しています。" Foreground="#FFD5DAEE" FontSize="12" TextWrapping="Wrap"/>
+                                <TextBlock x:Name="LblFeat3Title" Text="🌐 ブラウザ連携 ＆ 標準起動切替" Foreground="{DynamicResource PurpleBrush}" FontSize="15" FontWeight="Bold" Margin="0,0,0,4"/>
+                                <TextBlock x:Name="LblFeat3Desc" Text="Webブラウザからの直接起動と、ランチャーを通さない標準起動の切り替えに対応しています。" Foreground="{DynamicResource TextBodyBrush}" FontSize="12" TextWrapping="Wrap"/>
                             </StackPanel>
                         </Border>
 
@@ -384,7 +514,7 @@
             </Border>
 
             <!-- ================= 読み込み中 (Launching) オーバーレイ ================= -->
-            <Border x:Name="LaunchOverlay" Grid.RowSpan="2" Background="#E60A0C13" CornerRadius="16" Visibility="Collapsed">
+            <Border x:Name="LaunchOverlay" Grid.RowSpan="2" Background="{DynamicResource OverlayBrush}" CornerRadius="16" Visibility="Collapsed">
                 <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
                     <Border x:Name="LaunchSpinner" Width="68" Height="68" BorderThickness="12" CornerRadius="6" Margin="0,0,0,30" HorizontalAlignment="Center" RenderTransformOrigin="0.5,0.5" BorderBrush="{StaticResource AccentGradient}">
                         <Border.RenderTransform>
@@ -409,8 +539,9 @@
                             </Style>
                         </Border.Style>
                     </Border>
-                    <TextBlock x:Name="LblLaunching" Text="Robloxを起動しています..." Foreground="White" FontSize="20" FontWeight="SemiBold" HorizontalAlignment="Center" Margin="0,0,0,16"/>
-                    <ProgressBar IsIndeterminate="True" Width="220" Height="4" Foreground="#FF5B7CFF" Background="#FF222842" BorderThickness="0"/>
+                    <TextBlock x:Name="LblLaunching" Text="Robloxを起動しています..." Foreground="{DynamicResource TextBrush}" FontSize="20" FontWeight="SemiBold" HorizontalAlignment="Center" Margin="0,0,0,16"/>
+                    <ProgressBar IsIndeterminate="True" Width="220" Height="4" Foreground="#FF5B7CFF" Background="{DynamicResource SurfaceRaisedBrush}" BorderThickness="0"/>
+                    <Button x:Name="BtnCancelLaunch" Content="キャンセル" Style="{StaticResource SecondaryButton}" Width="140" Height="36" Margin="0,26,0,0" HorizontalAlignment="Center" Click="CancelLaunch_Click"/>
                 </StackPanel>
             </Border>
         </Grid>
