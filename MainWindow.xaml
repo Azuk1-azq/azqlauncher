@@ -41,7 +41,7 @@
                     </Grid>
                     <TextBlock Text="AZQLAUNCHER" Foreground="{DynamicResource TextBrush}" FontFamily="Bahnschrift, Segoe UI" FontSize="18" FontWeight="SemiBold" VerticalAlignment="Center"/>
                     <Border Background="{DynamicResource SurfaceRaisedBrush}" CornerRadius="6" Padding="7,2" Margin="12,1,0,0" VerticalAlignment="Center">
-                        <TextBlock Text="beta0.0.5" Foreground="{DynamicResource AccentTextBrush}" FontSize="11" FontWeight="SemiBold"/>
+                        <TextBlock Text="beta0.0.6" Foreground="{DynamicResource AccentTextBrush}" FontSize="11" FontWeight="SemiBold"/>
                     </Border>
                 </StackPanel>
 

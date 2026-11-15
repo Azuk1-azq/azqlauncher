@@ -8,7 +8,7 @@ namespace AZQLAUNCHER
     {
         public static readonly Dictionary<string, string> Zh = new()
         {
-            ["--- AZQLAUNCHER beta0.0.5 started ---"] = "--- AZQLAUNCHER beta0.0.5 已启动 ---",
+            ["--- AZQLAUNCHER beta0.0.6 started ---"] = "--- AZQLAUNCHER beta0.0.6 已启动 ---",
             ["Data folder: {0}"] = "数据保存位置: {0}",
             ["Imported settings, Mods, etc. from the old version's folder."] = "已从旧版本文件夹导入设置、Mods 等。",
             ["🎮 Dashboard"] = "🎮 仪表盘",
@@ -317,7 +317,7 @@ namespace AZQLAUNCHER
 
         public static readonly Dictionary<string, string> Es = new()
         {
-            ["--- AZQLAUNCHER beta0.0.5 started ---"] = "--- AZQLAUNCHER beta0.0.5 iniciado ---",
+            ["--- AZQLAUNCHER beta0.0.6 started ---"] = "--- AZQLAUNCHER beta0.0.6 iniciado ---",
             ["Data folder: {0}"] = "Carpeta de datos: {0}",
             ["Imported settings, Mods, etc. from the old version's folder."] = "Se importaron los ajustes, Mods, etc. de la carpeta de la versión anterior.",
             ["🎮 Dashboard"] = "🎮 Panel",

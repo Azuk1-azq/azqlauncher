@@ -167,7 +167,7 @@ namespace AZQLAUNCHER
         private static HttpClient CreateHttpClient()
         {
             var c = new HttpClient { Timeout = TimeSpan.FromMinutes(3) };
-            c.DefaultRequestHeaders.UserAgent.ParseAdd("AZQLAUNCHER/0.0.5");
+            c.DefaultRequestHeaders.UserAgent.ParseAdd("AZQLAUNCHER/0.0.6");
             return c;
         }
 
@@ -246,7 +246,7 @@ namespace AZQLAUNCHER
             CleanupOldLogs();
 
             LoadSettings();
-            AddLog(T("--- AZQLAUNCHER beta0.0.5 を起動しました ---", "--- AZQLAUNCHER beta0.0.5 started ---"));
+            AddLog(T("--- AZQLAUNCHER beta0.0.6 を起動しました ---", "--- AZQLAUNCHER beta0.0.6 started ---"));
             AddLog(TF($"データの保存先: {dataDir}", $"Data folder: {dataDir}"));
             if (migrated) AddLog(T("旧バージョンのフォルダから設定・Modsなどを引き継ぎました。", "Imported settings, Mods, etc. from the old version's folder."));
             RestoreWindowSize();
