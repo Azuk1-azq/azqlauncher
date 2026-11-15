@@ -3,7 +3,7 @@ using System.Windows;
 using System.Windows.Controls;
 
 // beta0.0.7: 設定画面をカテゴリ (タブ) ごとに分けました。
-//   一般 / 起動 / 複数起動と接続 / メンテナンス
+//   一般 / 起動 / 接続 / メンテナンス
 namespace AZQLAUNCHER
 {
     public partial class MainWindow
@@ -44,7 +44,7 @@ namespace AZQLAUNCHER
         {
             TabSetGeneral.Content = T("一般", "General");
             TabSetLaunch.Content = T("起動", "Launch");
-            TabSetNet.Content = T("複数起動と接続", "Multi-launch & Connection");
+            TabSetNet.Content = T("接続", "Connection");
             TabSetMaint.Content = T("メンテナンス", "Maintenance");
 
             LblWindowSectionTitle.Text = T("ウィンドウの動作", "Window behavior");
@@ -60,26 +60,9 @@ namespace AZQLAUNCHER
                 "Use these when Roblox misbehaves or when you want to put back files that Mods replaced.");
             LblAboutTitle.Text = T("ガイド", "Guide");
 
-            UpdateAutoCloseNote();
             ApplyAccountsLanguage();
             BuildPageTabs();
             ApplyPageTabsLanguage();
-        }
-
-        // マルチインスタンス中は「起動後にランチャーを閉じる」を使わない (ランチャーが開いたままになる) ことを、設定画面にも示す
-        private void UpdateAutoCloseNote()
-        {
-            if (ChkAutoClose == null || DescAutoClose == null) return;
-
-            string text = T("起動後はウィンドウを隠してトレイに常駐し、Roblox の終了と同時にランチャーも終了します。",
-                "Hides to the tray after launch and exits together with Roblox.");
-            if (config.MultiInstance)
-            {
-                text += "\n" + T("マルチインスタンスがオンの間は、この設定は使われません。ランチャーは開いたままで、Robloxが終了しても自動では終了しません。",
-                    "While Multi-instance is on, this setting is not used: the launcher stays open and does not exit when Roblox closes.");
-            }
-            DescAutoClose.Text = text;
-            ChkAutoClose.IsEnabled = !config.MultiInstance;
         }
     }
 }

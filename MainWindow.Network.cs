@@ -13,7 +13,7 @@ using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 
-// beta0.0.7: マルチインスタンス / サーバー地域の選択 / 自動再接続
+// beta0.0.7: サーバー地域の選択 / 自動再接続
 // MainWindow.xaml.cs が大きいため、新機能はこのファイルにまとめています。
 namespace AZQLAUNCHER
 {
@@ -92,13 +92,11 @@ namespace AZQLAUNCHER
     {
         private const int ReconnectDelaySec = 8;
         private const int MaxReconnectsPer30Min = 5;
-        private const string SingletonMutexName = "ROBLOX_singletonMutex";
         private const string ChannelRegPath = @"Software\ROBLOX Corporation\Environments\RobloxPlayer\Channel";
 
         private readonly List<RobloxSession> sessions = new List<RobloxSession>();
         private readonly HashSet<string> claimedLogs = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         private int reconnectInFlight;
-        private Mutex? singletonMutex;
         private GeoInfo? myGeo;
         private static readonly Dictionary<string, GeoInfo> GeoCache = new Dictionary<string, GeoInfo>();
 
@@ -128,19 +126,14 @@ namespace AZQLAUNCHER
 
         private void LoadNetworkSettingsToUi()
         {
-            ChkMultiInstance.IsChecked = config.MultiInstance;
             ChkAutoReconnect.IsChecked = config.AutoReconnect;
             ChkReconnectOnDrop.IsChecked = config.ReconnectOnDrop;
             ChkReconnectOnDrop.IsEnabled = config.AutoReconnect;
             SelectComboByTag(CmbServerRegion, config.ServerRegion, 0);
-
-            if (config.MultiInstance) EnsureSingletonMutex();
-            UpdateAutoCloseNote();
         }
 
         private void SaveNetworkSettingsFromUi()
         {
-            config.MultiInstance = ChkMultiInstance.IsChecked == true;
             config.AutoReconnect = ChkAutoReconnect.IsChecked == true;
             config.ReconnectOnDrop = ChkReconnectOnDrop.IsChecked == true;
             ChkReconnectOnDrop.IsEnabled = config.AutoReconnect;
@@ -148,8 +141,6 @@ namespace AZQLAUNCHER
             if (CmbServerRegion.SelectedItem is ComboBoxItem region)
                 config.ServerRegion = region.Tag?.ToString() ?? "Auto";
 
-            if (config.MultiInstance) EnsureSingletonMutex(); else ReleaseSingletonMutex();
-            UpdateAutoCloseNote();
             UpdateNetworkSummary();
         }
 
@@ -163,7 +154,7 @@ namespace AZQLAUNCHER
         {
             Nav_Click(NavSettings, e);
             ShowSettingsTab(TabSetNet);
-            Dispatcher.BeginInvoke(new Action(() => CardNetwork.BringIntoView()), System.Windows.Threading.DispatcherPriority.Loaded);
+            Dispatcher.BeginInvoke(new Action(() => CardRegion.BringIntoView()), System.Windows.Threading.DispatcherPriority.Loaded);
         }
 
         private string RegionName(string? tag)
@@ -191,12 +182,10 @@ namespace AZQLAUNCHER
                 ? off
                 : (config.ReconnectOnDrop ? T("放置・回線切断", "Idle and drops") : T("放置キックのみ", "Idle kick only"));
 
-            string multi = config.MultiInstance ? on : off;
             string region = RegionName(config.ServerRegion);
 
             var parts = new List<string>
             {
-                TF($"マルチ起動: {multi}", $"Multi-instance: {multi}"),
                 TF($"地域: {region}", $"Region: {region}"),
                 TF($"自動再接続: {reconnect}", $"Auto-reconnect: {reconnect}")
             };
@@ -210,15 +199,8 @@ namespace AZQLAUNCHER
             LblDashNetTitle.Text = T("接続の設定", "Connection settings");
             BtnDashNetSettings.Content = T("設定を開く", "Open settings");
 
-            LblNetSectionTitle.Text = T("マルチインスタンス", "Multi-instance");
-            LblNetSectionSub.Text = T("Robloxを複数同時に動かしたり、接続先や切断されたときの動作を設定します。変更はすぐ保存され、次の起動から使われます。",
-                "Run several Roblox clients at once and choose where you connect and what happens when you get disconnected. Changes are saved right away and used from the next launch.");
-
-            ChkMultiInstance.Content = T("マルチインスタンス (Robloxを複数同時に起動する)", "Multi-instance (run several Roblox clients at once)");
-            DescMultiInstance.Text = T("ランチャーから起動するたびに、別のRobloxを新しく開きます。Robloxが1つも動いていない状態で、ランチャーから起動してください (普通に起動済みのRobloxがあると効きません)。同じアカウントで同じサーバーに入ると、先に入っていた方が切断されます。",
-                "Every launch from this launcher opens a new Roblox client. Start from here while no Roblox is running (a client that was started the normal way blocks this). Joining the same server with the same account disconnects the first one.")
-                + "\n" + T("オンの間は、Robloxを起動してもランチャーは閉じず (隠れず)、Robloxがすべて終了しても自動では終了しません。",
-                "While this is on, the launcher stays open after Roblox starts and does not exit when Roblox closes.");
+            LblNetSectionSub.Text = T("接続先や切断されたときの動作を設定します。変更はすぐ保存され、次の起動から使われます。",
+                "Choose where you connect and what happens when you get disconnected. Changes are saved right away and used from the next launch.");
 
             LblServerRegionTitle.Text = T("接続するサーバー地域", "Preferred server region");
             CmbRegionAuto.Content = T("自動 (Robloxにおまかせ)", "Automatic (let Roblox choose)");
@@ -244,41 +226,6 @@ namespace AZQLAUNCHER
             BtnRestoreMods.ToolTip = T("Modsで置き換えたRobloxの元のファイルを戻します", "Puts back the original Roblox files that Mods replaced");
 
             UpdateNetworkSummary();
-        }
-
-        // =====================================================================
-        //  マルチインスタンス
-        // =====================================================================
-
-        // Roblox は "ROBLOX_singletonMutex" があると2つ目の起動を断る。ランチャーが先に持っておくことで、複数同時に起動できる。
-        private void EnsureSingletonMutex()
-        {
-            if (!config.MultiInstance || singletonMutex != null) return;
-            try
-            {
-                singletonMutex = new Mutex(true, SingletonMutexName, out bool createdNew);
-                if (createdNew)
-                {
-                    AddLog(T("マルチインスタンスを有効にしました。", "Multi-instance is on."));
-                }
-                else
-                {
-                    AddLog(T("注意: Roblox がすでに動いているため、マルチインスタンスが効かない可能性があります。Robloxをすべて閉じてから、ランチャーで起動し直してください。",
-                        "Note: Roblox is already running, so multi-instance may not work. Close every Roblox window and launch again from the launcher."));
-                }
-            }
-            catch (Exception ex)
-            {
-                AddLog(TF($"マルチインスタンスを有効にできませんでした: {ex.Message}", $"Could not turn on multi-instance: {ex.Message}"));
-            }
-        }
-
-        private void ReleaseSingletonMutex()
-        {
-            if (singletonMutex == null) return;
-            try { singletonMutex.Dispose(); } catch { }
-            singletonMutex = null;
-            AddLog(T("マルチインスタンスを無効にしました。", "Multi-instance is off."));
         }
 
         // =====================================================================

@@ -519,7 +519,7 @@
                                 <WrapPanel x:Name="SettingsTabs" Margin="0,0,0,8">
                                     <Button x:Name="TabSetGeneral" Tag="Active" Content="一般" Style="{StaticResource TabButton}" Click="SettingsTab_Click"/>
                                     <Button x:Name="TabSetLaunch" Content="起動" Style="{StaticResource TabButton}" Click="SettingsTab_Click"/>
-                                    <Button x:Name="TabSetNet" Content="複数起動と接続" Style="{StaticResource TabButton}" Click="SettingsTab_Click"/>
+                                    <Button x:Name="TabSetNet" Content="接続" Style="{StaticResource TabButton}" Click="SettingsTab_Click"/>
                                     <Button x:Name="TabSetAccounts" Content="アカウント" Style="{StaticResource TabButton}" Click="SettingsTab_Click"/>
                                     <Button x:Name="TabSetMaint" Content="メンテナンス" Style="{StaticResource TabButton}" Click="SettingsTab_Click"/>
                                 </WrapPanel>
@@ -611,18 +611,9 @@
                                     </Border>
                                 </StackPanel>
 
-                                <!-- ===== 複数起動と接続 ===== -->
+                                <!-- ===== 接続 ===== -->
                                 <StackPanel x:Name="SetNet" Visibility="Collapsed">
                                     <TextBlock x:Name="LblNetSectionSub" Text="" Foreground="{DynamicResource TextMutedBrush}" FontSize="12" TextWrapping="Wrap" Margin="0,0,0,12"/>
-
-                                    <!-- マルチインスタンス -->
-                                    <Border x:Name="CardNetwork" Style="{StaticResource Card}" Margin="0,0,0,12">
-                                        <StackPanel>
-                                            <TextBlock x:Name="LblNetSectionTitle" Text="マルチインスタンス" Foreground="{DynamicResource TextBrush}" FontSize="15" FontWeight="SemiBold" Margin="0,0,0,14"/>
-                                            <CheckBox x:Name="ChkMultiInstance" Content="マルチインスタンス (Robloxを複数同時に起動する)" Checked="Setting_Changed" Unchecked="Setting_Changed"/>
-                                            <TextBlock x:Name="DescMultiInstance" Text="" Foreground="{DynamicResource TextMutedBrush}" FontSize="12" TextWrapping="Wrap" Margin="52,3,0,2"/>
-                                        </StackPanel>
-                                    </Border>
 
                                     <!-- 接続するサーバー地域 -->
                                     <Border x:Name="CardRegion" Style="{StaticResource Card}" Margin="0,0,0,12">

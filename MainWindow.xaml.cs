@@ -88,9 +88,6 @@ namespace AZQLAUNCHER
         public double WindowWidth { get; set; } = 0;
         public double WindowHeight { get; set; } = 0;
 
-        // 複数起動・接続 (beta0.0.7)
-        public bool MultiInstance { get; set; } = false;
-
         // アカウントスイッチャー (beta0.0.8)
         public List<SavedAccount> Accounts { get; set; } = new();
         public string ActiveAccountId { get; set; } = "";
@@ -1553,10 +1550,10 @@ namespace AZQLAUNCHER
         private async void LaunchRobloxClient(string launchArgs, bool bypass, LaunchContext? ctx = null)
         {
             // 常駐監視中にもう一度起動しても、普通のRobloxは2つ目を開けない。理由が分かるように知らせる。
-            if (!config.MultiInstance && exitWatcherStarted && FindRunningRobloxBeta() != null)
+            if (exitWatcherStarted && FindRunningRobloxBeta() != null)
             {
-                string msg = T("Robloxはすでに起動中です。複数同時に起動するには、設定の「マルチインスタンス」をオンにしてください。",
-                    "Roblox is already running. Turn on “Multi-instance” in Settings to run more than one.");
+                string msg = T("Robloxはすでに起動中です。",
+                    "Roblox is already running.");
                 AddLog(msg);
                 if (!isRunningAsProtocol) MessageBox.Show(msg, "AZQLAUNCHER", MessageBoxButton.OK, MessageBoxImage.Information);
                 return;
@@ -1591,9 +1588,8 @@ namespace AZQLAUNCHER
         {
             if (!isRunningAsProtocol) LaunchOverlay.Visibility = Visibility.Visible;
 
-            // 旧バージョンの更新チャンネル設定の後始末と、マルチインスタンス用のミューテックスを先に整える (最初のRobloxより前に必要)
+            // 旧バージョンの更新チャンネル設定の後始末を先に整える
             RestoreRobloxChannel();
-            EnsureSingletonMutex();
 
             string? robloxExe = GetLatestRobloxExe();
             if (robloxExe == null)
@@ -1620,25 +1616,18 @@ namespace AZQLAUNCHER
             AddLog(TF($"対象クライアント検出: {targetVersionDir}", $"Target client detected: {targetVersionDir}"));
             HashSet<string> knownVersionDirs = GetAllRobloxVersionDirs();
 
-            // マルチインスタンス時は、すでに動いているRobloxを新しい起動と区別するためPIDを控える
-            // (起動途中でまだウィンドウの無い別インスタンスを誤って終了させないよう、古いプロセスの掃除もしない)
-            HashSet<int> existingPids = config.MultiInstance ? GetRobloxPids() : new HashSet<int>();
-
             try
             {
-                if (!config.MultiInstance)
+                foreach (var oldProc in Process.GetProcessesByName("RobloxPlayerBeta"))
                 {
-                    foreach (var oldProc in Process.GetProcessesByName("RobloxPlayerBeta"))
+                    try
                     {
-                        try
+                        if (oldProc.MainWindowHandle == IntPtr.Zero)
                         {
-                            if (oldProc.MainWindowHandle == IntPtr.Zero)
-                            {
-                                oldProc.Kill();
-                            }
+                            oldProc.Kill();
                         }
-                        catch { }
                     }
+                    catch { }
                 }
 
                 if (bypass)
@@ -1717,7 +1706,7 @@ namespace AZQLAUNCHER
                 }
 
                 // Roblox本体のアップデート中は「アップデート中」と表示し、実際に起動するまで待つ
-                var waitResult = await WaitForRobloxStartAsync(targetVersionDir, knownVersionDirs, bypass, ct, existingPids);
+                var waitResult = await WaitForRobloxStartAsync(targetVersionDir, knownVersionDirs, bypass, ct);
                 targetVersionDir = waitResult.versionDir;
                 UpdateDashboard();
                 if (waitResult.beta != null) proc = waitResult.beta;
@@ -1738,17 +1727,6 @@ namespace AZQLAUNCHER
                     // 起動できなかった(キャンセル等)
                     if (!isRunningAsProtocol) LaunchOverlay.Visibility = Visibility.Collapsed;
                     else Application.Current.Shutdown();
-                }
-                else if (config.MultiInstance && !isRunningAsProtocol)
-                {
-                    // マルチインスタンス中は「もう1つ起動」を続けられるよう、ランチャーを隠さず開いたままにする。
-                    // (Roblox終了時の自動終了もしない。ミューテックスを持っているのはこのランチャーなので、閉じると複数起動できなくなる)
-                    CloseProtocolWindow();
-                    SetTrayStatus(true);
-                    AddLog(T("Robloxの起動を確認しました。マルチインスタンスがオンのため、ランチャーは開いたままにします。",
-                        "Roblox launch confirmed. Multi-instance is on, so the launcher stays open."));
-                    await Task.Delay(800);
-                    LaunchOverlay.Visibility = Visibility.Collapsed;
                 }
                 else if (config.AutoClose || isRunningAsProtocol)
                 {
@@ -1875,12 +1853,6 @@ namespace AZQLAUNCHER
             int idleSeconds = 0;
             while (idleSeconds < 5)
             {
-                // 常駐中にマルチインスタンスがオンにされたら、自動終了はやめてランチャーを開いたままにする
-                if (config.MultiInstance && !isRunningAsProtocol)
-                {
-                    exitWatcherStarted = false;
-                    return;
-                }
                 bool busy = isLaunching || reconnectInFlight > 0 || FindRunningRobloxBeta() != null;
                 idleSeconds = busy ? 0 : idleSeconds + 1;
                 await Task.Delay(1000);
@@ -1998,15 +1970,13 @@ namespace AZQLAUNCHER
             return result;
         }
 
-        // exclude: すでに動いていたインスタンスのPID (マルチインスタンスで「新しく起動した1つ」を見分けるため)
-        private static Process? FindRunningRobloxBeta(ICollection<int>? exclude = null)
+        private static Process? FindRunningRobloxBeta()
         {
             foreach (var p in Process.GetProcessesByName("RobloxPlayerBeta"))
             {
                 try
                 {
                     if (p.HasExited) continue;
-                    if (exclude != null && exclude.Contains(p.Id)) continue;
                     return p;
                 }
                 catch { }
@@ -2040,7 +2010,7 @@ namespace AZQLAUNCHER
         }
 
         // Robloxが実際に起動するまで待つ。更新で新しいバージョンフォルダが作られた場合は、そちらにFastFlags/Modsを適用する。
-        private async Task<(Process? beta, string versionDir)> WaitForRobloxStartAsync(string initialVersionDir, HashSet<string> knownDirs, bool bypass, CancellationToken ct, HashSet<int>? excludePids = null)
+        private async Task<(Process? beta, string versionDir)> WaitForRobloxStartAsync(string initialVersionDir, HashSet<string> knownDirs, bool bypass, CancellationToken ct)
         {
             string currentDir = initialVersionDir;
             bool showedUpdating = false;
@@ -2055,7 +2025,7 @@ namespace AZQLAUNCHER
                     return (null, currentDir);
                 }
 
-                var beta = FindRunningRobloxBeta(excludePids);
+                var beta = FindRunningRobloxBeta();
 
                 // 更新で作られた新しいバージョンフォルダ (ダウンロード中はまだ exe が無い)
                 bool newDirExists = GetAllRobloxVersionDirs().Any(d => !knownDirs.Contains(d));
@@ -2992,9 +2962,7 @@ namespace AZQLAUNCHER
             }
             else if (running)
             {
-                SidebarStatusText.Text = runningCount > 1
-                    ? TF($"Roblox 実行中 ({runningCount}個)", $"Roblox is running ({runningCount} instances)")
-                    : T("Roblox 実行中", "Roblox is running");
+                SidebarStatusText.Text = T("Roblox 実行中", "Roblox is running");
                 dotKey = "OkBrush";
             }
             else
@@ -3004,10 +2972,7 @@ namespace AZQLAUNCHER
             }
             StatusDot.SetResourceReference(System.Windows.Shapes.Shape.FillProperty, dotKey);
 
-            // マルチインスタンスで実行中のときは、「もう1つ起動する」ことが分かる表示にする
-            BtnSidebarLaunch.Content = (config.MultiInstance && running)
-                ? T("＋ もう1つ起動", "+ Launch another")
-                : T("▶ Robloxを起動", "▶ Launch Roblox");
+            BtnSidebarLaunch.Content = T("▶ Robloxを起動", "▶ Launch Roblox");
             BtnSidebarLaunch.IsEnabled = !isLaunching;
             BtnLaunchRoblox.IsEnabled = !isLaunching;
             BtnLaunchVanilla.IsEnabled = !isLaunching;
