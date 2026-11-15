@@ -26,7 +26,8 @@ namespace AZQLAUNCHER
         public string Name { get; set; } = "";
         public string PlaceId { get; set; } = "";
         public long Players { get; set; }
-        public string PlayersText => Players > 0 ? $"👥 {Players:N0}" : "";
+        public string PlayersSuffix { get; set; } = " playing";
+        public string PlayersText => Players > 0 ? $"{Players:N0}{PlayersSuffix}" : "";
     }
 
     public class RecentGame
@@ -243,11 +244,11 @@ namespace AZQLAUNCHER
             Directory.CreateDirectory(logsDir);
             Directory.CreateDirectory(backupsDir);
             CleanupOldLogs();
-            AddLog("--- AZQLAUNCHER beta0.0.5 を起動しました ---");
-            AddLog($"データの保存先: {dataDir}");
-            if (migrated) AddLog("旧バージョンのフォルダから設定・Modsなどを引き継ぎました。");
 
             LoadSettings();
+            AddLog(T("--- AZQLAUNCHER beta0.0.5 を起動しました ---", "--- AZQLAUNCHER beta0.0.5 started ---"));
+            AddLog(TF($"データの保存先: {dataDir}", $"Data folder: {dataDir}"));
+            if (migrated) AddLog(T("旧バージョンのフォルダから設定・Modsなどを引き継ぎました。", "Imported settings, Mods, etc. from the old version's folder."));
             RestoreWindowSize();
             ApplyTheme();
             ApplyLanguage();
@@ -276,31 +277,76 @@ namespace AZQLAUNCHER
 
         private string GetEffectiveLanguage()
         {
-            if (config.Language == "ja" || config.Language == "en") return config.Language;
-            return CultureInfo.CurrentUICulture.TwoLetterISOLanguageName.Equals("ja", StringComparison.OrdinalIgnoreCase) ? "ja" : "en";
+            if (config.Language == "ja" || config.Language == "en" || config.Language == "zh" || config.Language == "es") return config.Language;
+            string two = CultureInfo.CurrentUICulture.TwoLetterISOLanguageName.ToLowerInvariant();
+            return (two == "ja" || two == "zh" || two == "es") ? two : "en";
+        }
+
+        // 表示言語に合わせて日本語/英語を切り替える (Language setting / system UI language)
+        // 直前に翻訳した文字列と、その再翻訳方法 (AddLog が言語切り替え時にログを書き換えるために使う)
+        [ThreadStatic] private static string? lastTrText;
+        [ThreadStatic] private static Func<string>? lastTrRender;
+
+        private string TrPlain(string ja, string en)
+        {
+            switch (GetEffectiveLanguage())
+            {
+                case "ja": return ja;
+                case "zh": return Loc.Zh.TryGetValue(en, out var z) ? z : en;
+                case "es": return Loc.Es.TryGetValue(en, out var s) ? s : en;
+                default: return en;
+            }
+        }
+
+        private string T(string ja, string en)
+        {
+            string r = TrPlain(ja, en);
+            lastTrText = r;
+            lastTrRender = () => TrPlain(ja, en);
+            return r;
+        }
+
+        // 補間文字列版 (値の埋め込み位置を保ったまま翻訳する)
+        private string TrFmt(string ja, FormattableString en)
+        {
+            string lang = GetEffectiveLanguage();
+            if (lang == "ja") return ja;
+            Dictionary<string, string>? dict = lang == "zh" ? Loc.Zh : lang == "es" ? Loc.Es : null;
+            if (dict != null && dict.TryGetValue(en.Format, out var tpl))
+            {
+                try { return string.Format(CultureInfo.CurrentCulture, tpl, en.GetArguments()); } catch (FormatException) { }
+            }
+            return en.ToString();
+        }
+
+        private string TF(string ja, FormattableString en)
+        {
+            string r = TrFmt(ja, en);
+            lastTrText = r;
+            lastTrRender = () => TrFmt(ja, en);
+            return r;
         }
 
         private void ApplyLanguage()
         {
-            bool isJa = GetEffectiveLanguage() == "ja";
 
-            NavDashboard.Content = isJa ? "🎮 ダッシュボード" : "🎮 Dashboard";
+            NavDashboard.Content = T("🎮 ダッシュボード", "🎮 Dashboard");
             NavFastFlags.Content = "⚡ FastFlags";
-            NavMods.Content = isJa ? "🎨 スカイボックス・Mods" : "🎨 Skybox & Mods";
-            NavLogs.Content = isJa ? "📜 ログ" : "📜 Logs";
-            NavSettings.Content = isJa ? "⚙️ 設定" : "⚙️ Settings";
+            NavMods.Content = T("🎨 スカイボックス・Mods", "🎨 Skybox & Mods");
+            NavLogs.Content = T("📜 ログ", "📜 Logs");
+            NavSettings.Content = T("⚙️ 設定", "⚙️ Settings");
 
-            LblQuickLaunchTitle.Text = isJa ? "クイック起動" : "Quick Launch";
-            LblDashSub.Text = isJa ? "設定を適用してRobloxを起動します" : "Applies your settings, then launches Roblox";
-            LblDashClientTitle.Text = isJa ? "Roblox クライアント" : "Roblox Client";
+            LblQuickLaunchTitle.Text = T("クイック起動", "Quick Launch");
+            LblDashSub.Text = T("設定を適用してRobloxを起動します", "Applies your settings, then launches Roblox");
+            LblDashClientTitle.Text = T("Roblox クライアント", "Roblox Client");
             LblDashFlagsTitle.Text = "FastFlags";
             LblDashModsTitle.Text = "Mods";
             UpdateDashboard();
-            BtnLaunchRoblox.Content = isJa ? "▶ Robloxを直接起動" : "▶ Launch Roblox";
-            BtnLaunchVanilla.Content = isJa ? "⏩ 標準起動 (Modsなし)" : "⏩ Vanilla Launch";
-            BtnLaunchRoblox.ToolTip = isJa ? "FastFlags と Mods を適用して Roblox を起動します (Ctrl+Enter)" : "Launch Roblox with your FastFlags and Mods applied (Ctrl+Enter)";
-            BtnLaunchVanilla.ToolTip = isJa ? "FastFlags と Mods を適用せず (元に戻して) 標準の Roblox を起動します" : "Launch stock Roblox: FastFlags and Mods are removed first";
-            BtnSidebarLaunch.Content = isJa ? "▶ Robloxを起動" : "▶ Launch Roblox";
+            BtnLaunchRoblox.Content = T("▶ Robloxを直接起動", "▶ Launch Roblox");
+            BtnLaunchVanilla.Content = T("⏩ 標準起動 (Modsなし)", "⏩ Vanilla Launch");
+            BtnLaunchRoblox.ToolTip = T("FastFlags と Mods を適用して Roblox を起動します (Ctrl+Enter)", "Launch Roblox with your FastFlags and Mods applied (Ctrl+Enter)");
+            BtnLaunchVanilla.ToolTip = T("FastFlags と Mods を適用せず (元に戻して) 標準の Roblox を起動します", "Launch stock Roblox: FastFlags and Mods are removed first");
+            BtnSidebarLaunch.Content = T("▶ Robloxを起動", "▶ Launch Roblox");
             NavDashboard.ToolTip = "Ctrl+1";
             NavFastFlags.ToolTip = "Ctrl+2";
             NavMods.ToolTip = "Ctrl+3";
@@ -308,167 +354,201 @@ namespace AZQLAUNCHER
             NavSettings.ToolTip = "Ctrl+5";
 
             LblFastFlagsTitle.Text = "FastFlags";
-            LblFastFlagsSub.Text = isJa ? "ホワイトリスト準拠の安全なクライアント設定" : "Allowlist-compliant client settings";
-            BtnResetFastFlags.Content = isJa ? "リセット" : "Reset";
-            LblPerfCardTitle.Text = isJa ? "パフォーマンス・フレームレート" : "Performance & Frame Rate";
-            ChkUnlockFPS.Content = isJa ? "FPS上限を解放する" : "Unlock FPS Limit";
-            LblTargetFps.Text = isJa ? "目標FPS上限:" : "Target FPS Limit:";
-            ChkDisablePostFx.Content = isJa ? "PostFX (ブルーム・被写界深度等の重いエフェクト) を無効化" : "Disable PostFX (Bloom, Depth of Field, etc.)";
-            ChkLowRenderQuality.Content = isJa ? "レンダリング品質を軽量化 (FRM品質レベル1固定)" : "Low Render Quality (Force FRM Level 1)";
-            LblLargeCardTitle.Text = isJa ? "大人数サーバー向けの軽量化" : "Large-Server Performance";
-            LblLargeNote.Text = isJa ? "人が多いサーバーで重いのは主に描画と物理演算です。ここはRoblox公式が許可しているフラグだけを使います。効果はPCやゲームによって変わります。" : "Crowded servers are mostly bound by rendering. Only flags on Roblox's official allowlist are used here; results vary by PC and game.";
-            BtnLargePreset.Content = isJa ? "⚡ 大人数向けプリセットを適用" : "⚡ Apply large-server preset";
-            ChkLowTexture.Content = isJa ? "テクスチャ品質を最低にする" : "Lowest texture quality";
-            ChkDisableMsaa.Content = isJa ? "アンチエイリアス (MSAA) を切る" : "Disable MSAA";
-            ChkReduceGrass.Content = isJa ? "草の描画をなくす" : "Remove grass rendering";
-            ChkAggressiveLod.Content = isJa ? "遠くのモデルを早めに簡略化する (LOD距離を短縮)" : "Simplify distant models sooner (shorter LOD distance)";
-            ChkPauseVoxelizer.Content = isJa ? "ライティングの更新を停止 (見た目が崩れることがあります)" : "Pause voxel lighting updates (can look off)";
-            ChkHighPriority.Content = isJa ? "RobloxのCPU優先度を「高」にする" : "Set Roblox CPU priority to High";
-            LblFlagNote.Text = isJa ? "※ FPS上限の解放とPostFX無効化は、Roblox公式の許可リストにないため、現在のRobloxでは効かない場合があります。" : "Note: FPS unlock and PostFX are not on Roblox's official allowlist and may be ignored by the current client.";
-            LblGraphicsCardTitle.Text = isJa ? "グラフィックス・レンダリング" : "Graphics & Rendering";
-            LblGraphicsApi.Text = isJa ? "描画エンジン (API):" : "Graphics API:";
-            CmbApiAuto.Content = isJa ? "自動 (デフォルト)" : "Automatic (Default)";
-            LblCustomFlagsTitle.Text = isJa ? "フラグ管理" : "Flag Manager";
-            LblFlagMgrHint.Text = isJa ? "スイッチで有効/無効を切り替え、値はそのまま書き換えられます。変更は自動保存されます。上のスイッチ類の設定が優先されます。" : "Toggle flags on/off and edit values inline. Changes are saved automatically. The switches above take priority.";
-            LblAddFlagTitle.Text = isJa ? "フラグを追加 (候補から選ぶか、名前を直接入力)" : "Add a flag (pick a suggestion or type a name)";
-            BtnAddFlag.Content = isJa ? "追加" : "Add";
-            TxtFlagSearch.ToolTip = isJa ? "名前で絞り込み" : "Filter by name";
-            TxtAddFlagValue.ToolTip = isJa ? "値 (true / false / 数値)" : "Value (true / false / number)";
-            TxtAddFlagName.ToolTip = isJa ? "フラグ名 (例: FIntDebugForceMSAASamples)" : "Flag name";
-            LblJsonEditorTitle.Text = isJa ? "JSONエディタ (上のリストと同期します)" : "JSON editor (synced with the list above)";
+            LblFastFlagsSub.Text = T("ホワイトリスト準拠の安全なクライアント設定", "Allowlist-compliant client settings");
+            BtnResetFastFlags.Content = T("リセット", "Reset");
+            LblPerfCardTitle.Text = T("パフォーマンス・フレームレート", "Performance & Frame Rate");
+            ChkUnlockFPS.Content = T("FPS上限を解放する", "Unlock FPS Limit");
+            LblTargetFps.Text = T("目標FPS上限:", "Target FPS Limit:");
+            ChkDisablePostFx.Content = T("PostFX (ブルーム・被写界深度等の重いエフェクト) を無効化", "Disable PostFX (Bloom, Depth of Field, etc.)");
+            ChkLowRenderQuality.Content = T("レンダリング品質を軽量化 (FRM品質レベル1固定)", "Low Render Quality (Force FRM Level 1)");
+            LblLargeCardTitle.Text = T("大人数サーバー向けの軽量化", "Large-Server Performance");
+            LblLargeNote.Text = T("人が多いサーバーで重いのは主に描画と物理演算です。ここはRoblox公式が許可しているフラグだけを使います。効果はPCやゲームによって変わります。", "Crowded servers are mostly bound by rendering. Only flags on Roblox's official allowlist are used here; results vary by PC and game.");
+            BtnLargePreset.Content = T("⚡ 大人数向けプリセットを適用", "⚡ Apply large-server preset");
+            ChkLowTexture.Content = T("テクスチャ品質を最低にする", "Lowest texture quality");
+            ChkDisableMsaa.Content = T("アンチエイリアス (MSAA) を切る", "Disable MSAA");
+            ChkReduceGrass.Content = T("草の描画をなくす", "Remove grass rendering");
+            ChkAggressiveLod.Content = T("遠くのモデルを早めに簡略化する (LOD距離を短縮)", "Simplify distant models sooner (shorter LOD distance)");
+            ChkPauseVoxelizer.Content = T("ライティングの更新を停止 (見た目が崩れることがあります)", "Pause voxel lighting updates (can look off)");
+            ChkHighPriority.Content = T("RobloxのCPU優先度を「高」にする", "Set Roblox CPU priority to High");
+            LblFlagNote.Text = T("※ FPS上限の解放とPostFX無効化は、Roblox公式の許可リストにないため、現在のRobloxでは効かない場合があります。", "Note: FPS unlock and PostFX are not on Roblox's official allowlist and may be ignored by the current client.");
+            LblGraphicsCardTitle.Text = T("グラフィックス・レンダリング", "Graphics & Rendering");
+            LblGraphicsApi.Text = T("描画エンジン (API):", "Graphics API:");
+            CmbApiAuto.Content = T("自動 (デフォルト)", "Automatic (Default)");
+            LblCustomFlagsTitle.Text = T("フラグ管理", "Flag Manager");
+            LblFlagMgrHint.Text = T("スイッチで有効/無効を切り替え、値はそのまま書き換えられます。変更は自動保存されます。上のスイッチ類の設定が優先されます。", "Toggle flags on/off and edit values inline. Changes are saved automatically. The switches above take priority.");
+            LblAddFlagTitle.Text = T("フラグを追加 (候補から選ぶか、名前を直接入力)", "Add a flag (pick a suggestion or type a name)");
+            BtnAddFlag.Content = T("追加", "Add");
+            TxtFlagSearch.ToolTip = T("名前で絞り込み", "Filter by name");
+            TxtAddFlagValue.ToolTip = T("値 (true / false / 数値)", "Value (true / false / number)");
+            TxtAddFlagName.ToolTip = T("フラグ名 (例: FIntDebugForceMSAASamples)", "Flag name");
+            LblJsonEditorTitle.Text = T("JSONエディタ (上のリストと同期します)", "JSON editor (synced with the list above)");
             UpdateJsonToggleText();
             RenderFlagRows();
-            BtnFormatJson.Content = isJa ? "JSON整形" : "Format JSON";
+            BtnFormatJson.Content = T("JSON整形", "Format JSON");
 
-            LblModsTitle.Text = isJa ? "カーソル・死亡音・スカイボックス・Mods" : "Cursor, Death Sound, Skybox & Mods";
-            ChkEnableMods.Content = isJa ? "カスタムMods・外観変更をRoblox起動時に自動適用する" : "Automatically apply custom Mods & visuals on launch";
+            LblModsTitle.Text = T("カーソル・死亡音・スカイボックス・Mods", "Cursor, Death Sound, Skybox & Mods");
+            ChkEnableMods.Content = T("カスタムMods・外観変更をRoblox起動時に自動適用する", "Automatically apply custom Mods & visuals on launch");
 
-            LblCursorTitle.Text = isJa ? "🖱️ マウスカーソル" : "🖱️ Mouse Cursor";
-            RbCursorSystem.Content = isJa ? "マウスカーソルそのまま (Windowsで設定している現在のカーソルを使用)" : "Keep System Cursor (Use Current Windows Cursor)";
-            RbCursorDefault.Content = isJa ? "Roblox標準カーソル" : "Roblox Default Cursor";
-            RbCursorClassic.Content = isJa ? "昔のマウスカーソル (2013年以前のクラシックカーソル)" : "Classic Mouse Cursor (Pre-2013 Legacy Cursor)";
-            RbCursorCustom.Content = isJa ? "カスタム画像 (.png) を使用" : "Use Custom Image (.png)";
-            BtnSelectCursor.Content = isJa ? "カーソル画像 (.png) を選択" : "Select Cursor (.png)";
-            BtnClearCursor.Content = isJa ? "解除" : "Clear";
+            LblCursorTitle.Text = T("🖱️ マウスカーソル", "🖱️ Mouse Cursor");
+            RbCursorSystem.Content = T("マウスカーソルそのまま (Windowsで設定している現在のカーソルを使用)", "Keep System Cursor (Use Current Windows Cursor)");
+            RbCursorDefault.Content = T("Roblox標準カーソル", "Roblox Default Cursor");
+            RbCursorClassic.Content = T("昔のマウスカーソル (2013年以前のクラシックカーソル)", "Classic Mouse Cursor (Pre-2013 Legacy Cursor)");
+            RbCursorCustom.Content = T("カスタム画像 (.png) を使用", "Use Custom Image (.png)");
+            BtnSelectCursor.Content = T("カーソル画像 (.png) を選択", "Select Cursor (.png)");
+            BtnClearCursor.Content = T("解除", "Clear");
 
-            LblSoundTitle.Text = isJa ? "🔊 死亡時の効果音 (Oof / 任意の音声自動変換)" : "🔊 Death Sound (Oof / Auto Audio Converter)";
-            BtnClassicOof.Content = isJa ? "クラシック Oof 音を設定" : "Use Classic Oof";
-            BtnSelectDeathSound.Content = isJa ? "音声ファイルを選択 (.mp3 / .wav / .ogg等)" : "Select Audio (.mp3 / .wav / .ogg...)";
-            BtnClearSound.Content = isJa ? "解除" : "Clear";
+            LblSoundTitle.Text = T("🔊 死亡時の効果音 (Oof / 任意の音声自動変換)", "🔊 Death Sound (Oof / Auto Audio Converter)");
+            BtnClassicOof.Content = T("クラシック Oof 音を設定", "Use Classic Oof");
+            BtnSelectDeathSound.Content = T("音声ファイルを選択 (.mp3 / .wav / .ogg等)", "Select Audio (.mp3 / .wav / .ogg...)");
+            BtnClearSound.Content = T("解除", "Clear");
 
-            LblSkyTitle.Text = isJa ? "🌌 カスタム スカイボックス (bk, dn, ft, lf, rt, up)" : "🌌 Custom Skybox (bk, dn, ft, lf, rt, up)";
-            BtnSelectSky.Content = isJa ? "スカイボックスフォルダを選択" : "Select Skybox Folder";
-            BtnClearSky.Content = isJa ? "解除" : "Clear";
+            LblSkyTitle.Text = T("🌌 カスタム スカイボックス (bk, dn, ft, lf, rt, up)", "🌌 Custom Skybox (bk, dn, ft, lf, rt, up)");
+            BtnSelectSky.Content = T("スカイボックスフォルダを選択", "Select Skybox Folder");
+            BtnClearSky.Content = T("解除", "Clear");
 
-            LblFontTitle.Text = isJa ? "🔤 カスタム フォント (.ttf / .otf)" : "🔤 Custom Font (.ttf / .otf)";
-            BtnSelectFont.Content = isJa ? "フォントファイルを選択" : "Select Font File";
-            BtnClearFont.Content = isJa ? "解除" : "Clear";
+            LblFontTitle.Text = T("🔤 カスタム フォント (.ttf / .otf)", "🔤 Custom Font (.ttf / .otf)");
+            BtnSelectFont.Content = T("フォントファイルを選択", "Select Font File");
+            BtnClearFont.Content = T("解除", "Clear");
 
-            LblModsFolderTitle.Text = isJa ? "📁 汎用 Mods フォルダ" : "📁 General Mods Folder";
-            BtnOpenMods.Content = isJa ? "Modsフォルダを開く" : "Open Mods Folder";
+            LblModsFolderTitle.Text = T("📁 汎用 Mods フォルダ", "📁 General Mods Folder");
+            BtnOpenMods.Content = T("Modsフォルダを開く", "Open Mods Folder");
 
-            LblLogsTitle.Text = isJa ? "実行ログ" : "Execution Logs";
-            BtnCopyLogs.Content = isJa ? "コピー" : "Copy";
-            BtnClearLogs.Content = isJa ? "クリア" : "Clear";
-            BtnOpenRobloxLogs.Content = isJa ? "📂 Robloxログ" : "📂 Roblox Logs";
-            BtnOpenLauncherLogs.Content = isJa ? "📂 ランチャーログ" : "📂 Launcher Logs";
+            LblLogsTitle.Text = T("実行ログ", "Execution Logs");
+            BtnCopyLogs.Content = T("コピー", "Copy");
+            BtnClearLogs.Content = T("クリア", "Clear");
+            BtnOpenRobloxLogs.Content = T("📂 Robloxログ", "📂 Roblox Logs");
+            BtnOpenLauncherLogs.Content = T("📂 ランチャーログ", "📂 Launcher Logs");
 
-            LblSettingsTitle.Text = isJa ? "ランチャー設定" : "Launcher Settings";
-            LblLanguage.Text = isJa ? "表示言語 (Language):" : "Display Language:";
-            CmbLangSystem.Content = isJa ? "システム言語 (自動)" : "System Language (Auto)";
-            ChkBypassLauncher.Content = isJa ? "ブラウザから起動時もランチャーを通さないで標準起動する" : "Bypass Launcher on Browser Launch";
-            ChkProtectCursor.Content = isJa ? "カスタムカーソルの適用を維持する" : "Keep custom cursor applied";
-            ChkAutoRegisterProtocol.Content = isJa ? "ランチャー起動時にブラウザ連携を自動登録する" : "Auto-register browser protocol on startup";
-            ChkAutoClose.Content = isJa ? "Robloxの起動後は画面を隠してトレイに常駐し、Roblox終了時に自動で終了する" : "After Roblox starts, hide to the tray and exit when Roblox closes";
-            ChkCleanClientSettings.Content = isJa ? "Roblox起動前に古いClientAppSettingsをクリーンアップする" : "Clean up old ClientAppSettings before launching Roblox";
-            LblProtocolTitle.Text = isJa ? "ブラウザ連携 (URIプロトコル)" : "Browser Integration (URI Protocol)";
-            BtnReRegisterProtocol.Content = isJa ? "ブラウザ連携を手動で再登録" : "Re-register Protocol Manually";
-            LblMaintenanceTitle.Text = isJa ? "メンテナンス・情報" : "Maintenance & Info";
-            BtnOpenRobloxFolder.Content = isJa ? "Robloxのクライアントフォルダを開く" : "Open Roblox Client Folder";
-            BtnRepairRoblox.Content = isJa ? "ClientSettings・読み取り専用解除" : "Reset ClientSettings & Permissions";
-            BtnShowIntro.Content = isJa ? "機能紹介ガイド" : "Feature Guide";
-            BtnRestoreMods.Content = isJa ? "Modsを元に戻す" : "Restore Original Files";
+            LblSettingsTitle.Text = T("ランチャー設定", "Launcher Settings");
+            LblLanguage.Text = T("表示言語 (Language):", "Display Language:");
+            CmbLangSystem.Content = T("システム言語 (自動)", "System Language (Auto)");
+            ChkBypassLauncher.Content = T("ブラウザから起動時もランチャーを通さないで標準起動する", "Bypass Launcher on Browser Launch");
+            ChkProtectCursor.Content = T("カスタムカーソルの適用を維持する", "Keep custom cursor applied");
+            ChkAutoRegisterProtocol.Content = T("ランチャー起動時にブラウザ連携を自動登録する", "Auto-register browser protocol on startup");
+            ChkAutoClose.Content = T("Robloxの起動後は画面を隠してトレイに常駐し、Roblox終了時に自動で終了する", "After Roblox starts, hide to the tray and exit when Roblox closes");
+            ChkCleanClientSettings.Content = T("Roblox起動前に古いClientAppSettingsをクリーンアップする", "Clean up old ClientAppSettings before launching Roblox");
+            LblProtocolTitle.Text = T("ブラウザ連携 (URIプロトコル)", "Browser Integration (URI Protocol)");
+            BtnReRegisterProtocol.Content = T("ブラウザ連携を手動で再登録", "Re-register Protocol Manually");
+            LblMaintenanceTitle.Text = T("メンテナンス・情報", "Maintenance & Info");
+            BtnOpenRobloxFolder.Content = T("Robloxのクライアントフォルダを開く", "Open Roblox Client Folder");
+            BtnRepairRoblox.Content = T("ClientSettings・読み取り専用解除", "Reset ClientSettings & Permissions");
+            BtnShowIntro.Content = T("機能紹介ガイド", "Feature Guide");
+            BtnRestoreMods.Content = T("Modsを元に戻す", "Restore Original Files");
 
-            LblAppearanceTitle.Text = isJa ? "表示" : "Appearance";
-            LblTheme.Text = isJa ? "テーマ:" : "Theme:";
-            CmbThemeSystem.Content = isJa ? "システム設定に合わせる (推奨)" : "Follow system (recommended)";
-            CmbThemeDark.Content = isJa ? "ダーク" : "Dark";
-            CmbThemeLight.Content = isJa ? "ライト" : "Light";
-            LblLaunchSectionTitle.Text = isJa ? "起動の動作" : "Launch Behavior";
-            ChkMinimizeToTray.Content = isJa ? "最小化したときトレイに格納する" : "Hide to tray when minimized";
-            DescAutoClose.Text = isJa ? "起動後はウィンドウを隠してトレイに常駐し、Roblox の終了と同時にランチャーも終了します。" : "Hides to the tray after launch and exits together with Roblox.";
-            DescMinimizeToTray.Text = isJa ? "オン (既定): 最小化するとトレイに格納します。オフ: タスクバーに残ります。" : "On (default): hides to the tray. Off: stays on the taskbar.";
-            DescBypassLauncher.Text = isJa ? "ブラウザ (roblox.com) から参加するときも FastFlags / Mods を適用しません。" : "Skips FastFlags and Mods when joining from the browser.";
-            DescCleanClientSettings.Text = isJa ? "起動前に ClientAppSettings.json を作り直し、削除した設定が残らないようにします (推奨)。" : "Rebuilds ClientAppSettings.json before launch so removed flags don't linger (recommended).";
-            DescProtectCursor.Text = isJa ? "Roblox が起動直後にカーソルを上書きしても、数秒間再適用して維持します。" : "Re-applies your cursor for a few seconds in case Roblox overwrites it at startup.";
-            DescAutoRegisterProtocol.Text = isJa ? "ブラウザの「Robloxを開く」をこのランチャーで受け取れるようにします。" : "Lets this launcher handle \"Open Roblox\" links from your browser.";
-            LblModsNote.Text = isJa ? "ここでの変更は次回の Roblox 起動時に反映されます (起動中の Roblox には反映されません)。" : "Changes take effect the next time Roblox is launched (not while it is running).";
+            LblAppearanceTitle.Text = T("表示", "Appearance");
+            LblTheme.Text = T("テーマ:", "Theme:");
+            CmbThemeSystem.Content = T("システム設定に合わせる (推奨)", "Follow system (recommended)");
+            CmbThemeDark.Content = T("ダーク", "Dark");
+            CmbThemeLight.Content = T("ライト", "Light");
+            LblLaunchSectionTitle.Text = T("起動の動作", "Launch Behavior");
+            ChkMinimizeToTray.Content = T("最小化したときトレイに格納する", "Hide to tray when minimized");
+            DescAutoClose.Text = T("起動後はウィンドウを隠してトレイに常駐し、Roblox の終了と同時にランチャーも終了します。", "Hides to the tray after launch and exits together with Roblox.");
+            DescMinimizeToTray.Text = T("オン (既定): 最小化するとトレイに格納します。オフ: タスクバーに残ります。", "On (default): hides to the tray. Off: stays on the taskbar.");
+            DescBypassLauncher.Text = T("ブラウザ (roblox.com) から参加するときも FastFlags / Mods を適用しません。", "Skips FastFlags and Mods when joining from the browser.");
+            DescCleanClientSettings.Text = T("起動前に ClientAppSettings.json を作り直し、削除した設定が残らないようにします (推奨)。", "Rebuilds ClientAppSettings.json before launch so removed flags don't linger (recommended).");
+            DescProtectCursor.Text = T("Roblox が起動直後にカーソルを上書きしても、数秒間再適用して維持します。", "Re-applies your cursor for a few seconds in case Roblox overwrites it at startup.");
+            DescAutoRegisterProtocol.Text = T("ブラウザの「Robloxを開く」をこのランチャーで受け取れるようにします。", "Lets this launcher handle \"Open Roblox\" links from your browser.");
+            LblModsNote.Text = T("ここでの変更は次回の Roblox 起動時に反映されます (起動中の Roblox には反映されません)。", "Changes take effect the next time Roblox is launched (not while it is running).");
             UpdateRunningStatus();
-            BtnExportSettings.Content = isJa ? "設定をエクスポート" : "Export Settings";
-            BtnImportSettings.Content = isJa ? "設定をインポート" : "Import Settings";
+            BtnExportSettings.Content = T("設定をエクスポート", "Export Settings");
+            BtnImportSettings.Content = T("設定をインポート", "Import Settings");
 
-            LblQuickJoinTitle.Text = isJa ? "クイック参加" : "Quick Join";
-            LblQuickJoinHint.Text = isJa
-                ? "ゲーム名 (日本語・英語OK) を入力するだけで、候補から選んで直接参加できます。URL・プレイスID・プライベートサーバーのリンクも使えます"
-                : "Just type a game name (any language) and pick it from the suggestions to join instantly. URLs, place IDs and private server links work too.";
-            LblQuickJoinBadge.Text = isJa ? "ゲーム名を入れるだけ" : "Just type the name";
-            LblQuickJoinPlaceholder.Text = isJa ? "ゲーム名を入力 (例: Blox Fruits / ブロックスフルーツ)" : "Type a game name (e.g. Blox Fruits)";
-            BtnQuickJoin.Content = isJa ? "参加" : "Join";
-            LblRecentTitle.Text = isJa ? "最近のゲーム (右クリックで履歴から削除)" : "Recent games (right-click to remove)";
-            BtnCancelLaunch.Content = isJa ? "キャンセル" : "Cancel";
-            BtnFpsUnlimited.Content = isJa ? "無制限" : "Max";
+            LblQuickJoinTitle.Text = T("クイック参加", "Quick Join");
+            LblQuickJoinHint.Text = T("ゲーム名 (日本語・英語OK) を入力するだけで、候補から選んで直接参加できます。URL・プレイスID・プライベートサーバーのリンクも使えます", "Just type a game name (any language) and pick it from the suggestions to join instantly. URLs, place IDs and private server links work too.");
+            LblQuickJoinBadge.Text = T("ゲーム名を入れるだけ", "Just type the name");
+            LblQuickJoinPlaceholder.Text = T("ゲーム名を入力 (例: Blox Fruits / ブロックスフルーツ)", "Type a game name (e.g. Blox Fruits)");
+            BtnQuickJoin.Content = T("参加", "Join");
+            LblRecentTitle.Text = T("最近のゲーム (右クリックで履歴から削除)", "Recent games (right-click to remove)");
+            BtnCancelLaunch.Content = T("キャンセル", "Cancel");
+            BtnFpsUnlimited.Content = T("無制限", "Max");
 
-            LblWelcomeTitle.Text = isJa ? "AZQLAUNCHER へようこそ！" : "Welcome to AZQLAUNCHER!";
-            LblWelcomeSub.Text = isJa ? "主な機能のご紹介" : "Overview of Main Features";
-            LblFeat1Title.Text = isJa ? "⚡ FastFlags ＆ FPS上限解放" : "⚡ FastFlags & FPS Unlocker";
-            LblFeat1Desc.Text = isJa ? "ホワイトリスト準拠の安全設計で、FPS上限設定や描画エンジンの切り替えが可能です。" : "Allowlist-compliant design for FPS limits and graphics API switching.";
-            LblFeat2Title.Text = isJa ? "🎨 カーソル・死亡音・スカイボックス・フォントのカスタマイズ" : "🎨 Cursor, Death Sound, Skybox & Font Customization";
-            LblFeat2Desc.Text = isJa ? "Windowsの現在のカーソル維持、クラシックカーソル、内蔵Oof音や自動OGG変換、スカイボックス・UIフォント変更に対応しています。" : "Supports Windows current cursor, classic cursor, built-in Oof or auto-converted audio, skyboxes, and UI fonts.";
-            LblFeat3Title.Text = isJa ? "🌐 ブラウザ連携 ＆ 標準起動切替" : "🌐 Browser Integration & Vanilla Bypass";
-            LblFeat3Desc.Text = isJa ? "Webブラウザからの直接起動と、ランチャーを通さない標準起動の切り替えに対応しています。" : "Supports direct browser launches and bypassing launcher modifications.";
-            BtnStartLauncher.Content = isJa ? "はじめる" : "Get Started";
+            LblWelcomeTitle.Text = T("AZQLAUNCHER へようこそ！", "Welcome to AZQLAUNCHER!");
+            LblWelcomeSub.Text = T("主な機能のご紹介", "Overview of Main Features");
+            LblFeat1Title.Text = T("⚡ FastFlags ＆ FPS上限解放", "⚡ FastFlags & FPS Unlocker");
+            LblFeat1Desc.Text = T("ホワイトリスト準拠の安全設計で、FPS上限設定や描画エンジンの切り替えが可能です。", "Allowlist-compliant design for FPS limits and graphics API switching.");
+            LblFeat2Title.Text = T("🎨 カーソル・死亡音・スカイボックス・フォントのカスタマイズ", "🎨 Cursor, Death Sound, Skybox & Font Customization");
+            LblFeat2Desc.Text = T("Windowsの現在のカーソル維持、クラシックカーソル、内蔵Oof音や自動OGG変換、スカイボックス・UIフォント変更に対応しています。", "Supports Windows current cursor, classic cursor, built-in Oof or auto-converted audio, skyboxes, and UI fonts.");
+            LblFeat3Title.Text = T("🌐 ブラウザ連携 ＆ 標準起動切替", "🌐 Browser Integration & Vanilla Bypass");
+            LblFeat3Desc.Text = T("Webブラウザからの直接起動と、ランチャーを通さない標準起動の切り替えに対応しています。", "Supports direct browser launches and bypassing launcher modifications.");
+            BtnStartLauncher.Content = T("はじめる", "Get Started");
 
-            LblLaunching.Text = isJa ? "Robloxを起動しています..." : "Launching Roblox...";
+            LblLaunching.Text = T("Robloxを起動しています...", "Launching Roblox...");
             RebuildRecentGames();
 
-            CursorPathText.Text = string.IsNullOrEmpty(config.CustomCursorPath) ? (isJa ? "未設定" : "Not set") : Path.GetFileName(config.CustomCursorPath);
-            SkyboxPathText.Text = string.IsNullOrEmpty(config.SkyboxFolderPath) ? (isJa ? "未設定" : "Not set") : Path.GetFileName(config.SkyboxFolderPath);
-            FontPathText.Text = string.IsNullOrEmpty(config.CustomFontPath) ? (isJa ? "未設定" : "Not set") : Path.GetFileName(config.CustomFontPath);
+            CursorPathText.Text = string.IsNullOrEmpty(config.CustomCursorPath) ? (T("未設定", "Not set")) : Path.GetFileName(config.CustomCursorPath);
+            SkyboxPathText.Text = string.IsNullOrEmpty(config.SkyboxFolderPath) ? (T("未設定", "Not set")) : Path.GetFileName(config.SkyboxFolderPath);
+            FontPathText.Text = string.IsNullOrEmpty(config.CustomFontPath) ? (T("未設定", "Not set")) : Path.GetFileName(config.CustomFontPath);
 
             if (string.IsNullOrEmpty(config.DeathSoundPath))
             {
-                DeathSoundPathText.Text = isJa ? "現在の設定: 未設定 (Roblox標準)" : "Current: Not set (Default)";
+                DeathSoundPathText.Text = T("現在の設定: 未設定 (Roblox標準)", "Current: Not set (Default)");
             }
             else
             {
                 string disp = string.IsNullOrEmpty(config.DeathSoundDisplayName) ? Path.GetFileName(config.DeathSoundPath) : config.DeathSoundDisplayName;
-                DeathSoundPathText.Text = isJa ? $"現在の設定: {disp}" : $"Current: {disp}";
+                DeathSoundPathText.Text = TF($"現在の設定: {disp}", $"Current: {disp}");
             }
         }
 
         private void UpdateProtocolStatusText(bool registered, string? error = null)
         {
-            bool isJa = GetEffectiveLanguage() == "ja";
             if (!string.IsNullOrEmpty(error))
             {
-                ProtocolStatusText.Text = isJa ? $"状態: 登録エラー ({error})" : $"Status: Error ({error})";
+                ProtocolStatusText.Text = TF($"状態: 登録エラー ({error})", $"Status: Error ({error})");
                 SetFg(ProtocolStatusText, "ErrBrush");
             }
             else if (registered)
             {
-                ProtocolStatusText.Text = isJa ? "状態: 有効 (roblox-player / roblox 登録済み)" : "Status: Active (roblox-player / roblox registered)";
+                ProtocolStatusText.Text = T("状態: 有効 (roblox-player / roblox 登録済み)", "Status: Active (roblox-player / roblox registered)");
                 SetFg(ProtocolStatusText, "OkBrush");
             }
             else
             {
-                ProtocolStatusText.Text = isJa ? "状態: 自動登録オフ" : "Status: Auto-register OFF";
+                ProtocolStatusText.Text = T("状態: 自動登録オフ", "Status: Auto-register OFF");
                 SetFg(ProtocolStatusText, "TextMutedBrush");
             }
         }
 
+        private sealed class LogEntry
+        {
+            public string Time = "";
+            public string Text = "";
+            public Func<string>? Render;
+        }
+
+        private readonly List<LogEntry> logEntries = new();
+
+        // 言語を切り替えたとき、画面のログも今の言語で書き直す
+        private void RebuildLogView()
+        {
+            List<LogEntry> snap;
+            lock (logLock) snap = new List<LogEntry>(logEntries);
+            var sb = new System.Text.StringBuilder();
+            foreach (var e in snap)
+            {
+                string text;
+                try { text = e.Render != null ? e.Render() : e.Text; } catch { text = e.Text; }
+                sb.Append('[').Append(e.Time).Append("] ").Append(text).Append('\n');
+            }
+            TxtLogs.Text = sb.ToString();
+            TxtLogs.ScrollToEnd();
+        }
+
         private void AddLog(string message)
         {
-            string line = $"[{DateTime.Now:HH:mm:ss}] {message}";
+            var now = DateTime.Now;
+            string line = $"[{now:HH:mm:ss}] {message}";
+            var entry = new LogEntry
+            {
+                Time = now.ToString("HH:mm:ss"),
+                Text = message,
+                Render = (lastTrText != null && lastTrText == message) ? lastTrRender : null
+            };
+            lock (logLock)
+            {
+                logEntries.Add(entry);
+                if (logEntries.Count > 3000) logEntries.RemoveRange(0, 1000);
+            }
 
             // ランチャーは Roblox 終了と同時に閉じるため、画面のログは消える。ファイルにも残しておく。
             try
@@ -592,12 +672,11 @@ namespace AZQLAUNCHER
 
         private void UpdateDashboard()
         {
-            bool isJa = GetEffectiveLanguage() == "ja";
 
             string? exe = GetLatestRobloxExe();
             if (exe == null)
             {
-                DashClientText.Text = isJa ? "未検出" : "Not found";
+                DashClientText.Text = T("未検出", "Not found");
                 SetFg(DashClientText, "ErrBrush");
             }
             else
@@ -607,10 +686,10 @@ namespace AZQLAUNCHER
             }
 
             int flags = CountActiveFlags();
-            DashFlagsText.Text = flags > 0 ? (isJa ? $"{flags} 件を適用" : $"{flags} applied") : (isJa ? "なし" : "None");
+            DashFlagsText.Text = flags > 0 ? (TF($"{flags} 件を適用", $"{flags} applied")) : (T("なし", "None"));
             SetFg(DashFlagsText, flags > 0 ? "TextBrush" : "TextMutedBrush");
 
-            DashModsText.Text = config.EnableMods ? (isJa ? "有効" : "Enabled") : (isJa ? "無効" : "Disabled");
+            DashModsText.Text = config.EnableMods ? (T("有効", "Enabled")) : (T("無効", "Disabled"));
             SetFg(DashModsText, config.EnableMods ? "OkBrush" : "TextMutedBrush");
         }
 
@@ -741,11 +820,13 @@ namespace AZQLAUNCHER
                 }
                 catch (Exception ex)
                 {
-                    AddLog($"設定ファイル読み込みエラー: {ex.Message} (破損したファイルは config.json.bak に退避しました)");
+                    AddLog(TF($"設定ファイル読み込みエラー: {ex.Message} (破損したファイルは config.json.bak に退避しました)", $"Failed to read settings file: {ex.Message} (the corrupted file was backed up to config.json.bak)"));
                     try { File.Copy(configPath, configPath + ".bak", true); } catch { }
                 }
             }
             config.RecentGames ??= new List<RecentGame>();
+            if (!string.IsNullOrEmpty(config.DeathSoundDisplayName))
+                config.DeathSoundDisplayName = config.DeathSoundDisplayName.Replace("クラシック Oof 音 (内蔵アセット)", "Classic Oof (built-in)").Replace("(自動OGG変換済み)", "(auto-converted OGG)");
             FixBundledAssetPaths();
 
             foreach (ComboBoxItem item in CmbLanguage.Items)
@@ -865,7 +946,7 @@ namespace AZQLAUNCHER
             }
             catch (Exception ex)
             {
-                AddLog($"設定の保存に失敗しました: {ex.Message}");
+                AddLog(TF($"設定の保存に失敗しました: {ex.Message}", $"Failed to save settings: {ex.Message}"));
             }
 
             UpdateDashboard();
@@ -910,7 +991,7 @@ namespace AZQLAUNCHER
         // 変更から少し待って自動保存する (「保存」を押し忘れても失われない)
         private void MarkFastFlagsDirty()
         {
-            FastFlagsSaveStatusText.Text = GetEffectiveLanguage() == "ja" ? "変更あり… 自動で保存します" : "Changed… auto-saving";
+            FastFlagsSaveStatusText.Text = T("変更あり… 自動で保存します", "Changed… auto-saving");
             SetFg(FastFlagsSaveStatusText, "WarnBrush");
             if (autoSaveTimer != null)
             {
@@ -924,7 +1005,7 @@ namespace AZQLAUNCHER
             autoSaveTimer?.Stop();
             if (!isLoaded) return;
             SaveSettings();
-            FastFlagsSaveStatusText.Text = GetEffectiveLanguage() == "ja" ? "✓ 自動保存しました (次回の起動時に反映)" : "✓ Auto-saved (applied on next launch)";
+            FastFlagsSaveStatusText.Text = T("✓ 自動保存しました (次回の起動時に反映)", "✓ Auto-saved (applied on next launch)");
             SetFg(FastFlagsSaveStatusText, "OkBrush");
         }
 
@@ -932,10 +1013,9 @@ namespace AZQLAUNCHER
         {
             SaveSettings();
             string? robloxExe = GetLatestRobloxExe();
-            bool isJa = GetEffectiveLanguage() == "ja";
             if (isLaunching || FindRunningRobloxBeta() != null)
             {
-                FastFlagsSaveStatusText.Text = isJa ? "✓ 保存しました (Robloxの次回起動で反映)" : "✓ Saved (applies on the next Roblox launch)";
+                FastFlagsSaveStatusText.Text = T("✓ 保存しました (Robloxの次回起動で反映)", "✓ Saved (applies on the next Roblox launch)");
                 SetFg(FastFlagsSaveStatusText, "OkBrush");
                 return;
             }
@@ -944,22 +1024,22 @@ namespace AZQLAUNCHER
                 try
                 {
                     ApplyFastFlags(Path.GetDirectoryName(robloxExe)!);
-                    FastFlagsSaveStatusText.Text = isJa ? "✓ 保存・反映しました" : "✓ Saved & Applied";
+                    FastFlagsSaveStatusText.Text = T("✓ 保存・反映しました", "✓ Saved & Applied");
                     SetFg(FastFlagsSaveStatusText, "OkBrush");
-                    AddLog("FastFlags設定を保存しました。");
+                    AddLog(T("FastFlags設定を保存しました。", "FastFlags settings saved."));
                 }
                 catch (Exception ex)
                 {
-                    FastFlagsSaveStatusText.Text = isJa ? "保存しましたが反映に失敗しました" : "Saved, but failed to apply";
+                    FastFlagsSaveStatusText.Text = T("保存しましたが反映に失敗しました", "Saved, but failed to apply");
                     SetFg(FastFlagsSaveStatusText, "ErrBrush");
-                    AddLog($"FastFlags反映エラー: {ex.Message}");
+                    AddLog(TF($"FastFlags反映エラー: {ex.Message}", $"FastFlags apply error: {ex.Message}"));
                 }
             }
             else
             {
-                FastFlagsSaveStatusText.Text = isJa ? "保存しました (Roblox未検出のため起動時に反映)" : "Saved (Roblox not found; will apply on launch)";
+                FastFlagsSaveStatusText.Text = T("保存しました (Roblox未検出のため起動時に反映)", "Saved (Roblox not found; will apply on launch)");
                 SetFg(FastFlagsSaveStatusText, "WarnBrush");
-                AddLog("FastFlags設定を保存しました (Robloxが見つからないため起動時に反映されます)。");
+                AddLog(T("FastFlags設定を保存しました (Robloxが見つからないため起動時に反映されます)。", "FastFlags settings saved (will be applied at launch because Roblox was not found)."));
             }
         }
 
@@ -973,10 +1053,9 @@ namespace AZQLAUNCHER
             ChkAggressiveLod.IsChecked = true;
             ChkHighPriority.IsChecked = true;
             SaveSettings();
-            bool isJa = GetEffectiveLanguage() == "ja";
-            FastFlagsSaveStatusText.Text = isJa ? "✓ 大人数向けプリセットを適用しました (次回の起動から有効)" : "✓ Large-server preset applied (takes effect on next launch)";
+            FastFlagsSaveStatusText.Text = T("✓ 大人数向けプリセットを適用しました (次回の起動から有効)", "✓ Large-server preset applied (takes effect on next launch)");
             SetFg(FastFlagsSaveStatusText, "OkBrush");
-            AddLog("大人数サーバー向けの軽量化プリセットを適用しました。");
+            AddLog(T("大人数サーバー向けの軽量化プリセットを適用しました。", "Applied the large-server performance preset."));
         }
 
         // Roblox本体のCPU優先度を上げる (OS標準の機能。失敗しても起動には影響しない)
@@ -986,11 +1065,11 @@ namespace AZQLAUNCHER
             try
             {
                 p.PriorityClass = ProcessPriorityClass.High;
-                AddLog("RobloxのCPU優先度を「高」にしました。");
+                AddLog(T("RobloxのCPU優先度を「高」にしました。", "Set Roblox CPU priority to High."));
             }
             catch (Exception ex)
             {
-                AddLog($"CPU優先度の変更に失敗しました: {ex.Message}");
+                AddLog(TF($"CPU優先度の変更に失敗しました: {ex.Message}", $"Failed to change CPU priority: {ex.Message}"));
             }
         }
 
@@ -1106,7 +1185,6 @@ namespace AZQLAUNCHER
         private void RenderFlagRows()
         {
             if (FlagListPanel == null) return;
-            bool isJa = GetEffectiveLanguage() == "ja";
             FlagListPanel.Children.Clear();
             string filter = (TxtFlagSearch?.Text ?? "").Trim();
             int shown = 0;
@@ -1129,8 +1207,7 @@ namespace AZQLAUNCHER
                     IsChecked = r.Enabled,
                     VerticalAlignment = VerticalAlignment.Center,
                     Margin = new Thickness(0, 0, 10, 0),
-                    ToolTip = isJa ? "オン/オフ (オフにすると値を残したまま適用しません)" : "On/off (off keeps the value but does not apply it)"
-                };
+                    ToolTip = T("オン/オフ (オフにすると値を残したまま適用しません)", "On/off (off keeps the value but does not apply it)")};
                 toggle.Checked += (_, __) => { r.Enabled = true; SyncJsonFromRows(); RenderFlagRows(); };
                 toggle.Unchecked += (_, __) => { r.Enabled = false; SyncJsonFromRows(); RenderFlagRows(); };
                 Grid.SetColumn(toggle, 0);
@@ -1148,16 +1225,16 @@ namespace AZQLAUNCHER
                 nameText.SetResourceReference(TextBlock.ForegroundProperty, "TextBrush");
                 namePanel.Children.Add(nameText);
 
-                string? desc = FlagCatalog.Where(f => f.name == r.Name).Select(f => isJa ? f.ja : f.en).FirstOrDefault();
+                string? desc = FlagCatalog.Where(f => f.name == r.Name).Select(f => T(f.ja, f.en)).FirstOrDefault();
                 var sub = new TextBlock { FontSize = 11, TextWrapping = TextWrapping.Wrap };
                 if (!official)
                 {
-                    sub.Text = isJa ? "⚠ 公式の許可リスト外 (現在のRobloxでは無視される可能性があります)" : "⚠ Not on the official allowlist (may be ignored)";
+                    sub.Text = T("⚠ 公式の許可リスト外 (現在のRobloxでは無視される可能性があります)", "⚠ Not on the official allowlist (may be ignored)");
                     sub.SetResourceReference(TextBlock.ForegroundProperty, "WarnBrush");
                 }
                 else
                 {
-                    sub.Text = desc ?? (isJa ? "✓ 公式の許可リストにあります" : "✓ On the official allowlist");
+                    sub.Text = desc ?? (T("✓ 公式の許可リストにあります", "✓ On the official allowlist"));
                     sub.SetResourceReference(TextBlock.ForegroundProperty, "TextMutedBrush");
                 }
                 namePanel.Children.Add(sub);
@@ -1167,7 +1244,7 @@ namespace AZQLAUNCHER
                 FrameworkElement editor;
                 if (r.Raw == "true" || r.Raw == "false")
                 {
-                    var cb = new CheckBox { IsChecked = r.Raw == "true", VerticalAlignment = VerticalAlignment.Center, Content = r.Raw == "true" ? (isJa ? "オン" : "On") : (isJa ? "オフ" : "Off"), MinWidth = 70 };
+                    var cb = new CheckBox { IsChecked = r.Raw == "true", VerticalAlignment = VerticalAlignment.Center, Content = r.Raw == "true" ? (T("オン", "On")) : (T("オフ", "Off")), MinWidth = 70 };
                     cb.Checked += (_, __) => { r.Raw = "true"; SyncJsonFromRows(); RenderFlagRows(); };
                     cb.Unchecked += (_, __) => { r.Raw = "false"; SyncJsonFromRows(); RenderFlagRows(); };
                     editor = cb;
@@ -1189,8 +1266,7 @@ namespace AZQLAUNCHER
                     Width = 30,
                     Height = 28,
                     Padding = new Thickness(0),
-                    ToolTip = isJa ? "このフラグを削除" : "Remove this flag"
-                };
+                    ToolTip = T("このフラグを削除", "Remove this flag")};
                 del.Click += (_, __) => { flagRows.Remove(r); SyncJsonFromRows(); RenderFlagRows(); };
                 Grid.SetColumn(del, 3);
                 grid.Children.Add(del);
@@ -1199,8 +1275,8 @@ namespace AZQLAUNCHER
             }
 
             FlagEmptyText.Text = flagRows.Count == 0
-                ? (isJa ? "まだフラグがありません。下から追加できます。" : "No flags yet. Add one below.")
-                : (shown == 0 ? (isJa ? "一致するフラグがありません。" : "No matching flags.") : "");
+                ? (T("まだフラグがありません。下から追加できます。", "No flags yet. Add one below."))
+                : (shown == 0 ? (T("一致するフラグがありません。", "No matching flags.")) : "");
         }
 
         private void TxtFlagSearch_TextChanged(object sender, TextChangedEventArgs e) => RenderFlagRows();
@@ -1209,10 +1285,9 @@ namespace AZQLAUNCHER
         {
             if (CmbAddFlag.SelectedItem is not ComboBoxItem item || item.Tag is not string name) return;
             var f = FlagCatalog.First(x => x.name == name);
-            bool isJa = GetEffectiveLanguage() == "ja";
             TxtAddFlagName.Text = f.name;
             TxtAddFlagValue.Text = f.def;
-            LblAddFlagDesc.Text = isJa ? f.ja : f.en;
+            LblAddFlagDesc.Text = T(f.ja, f.en);
         }
 
         private void AddFlag_KeyDown(object sender, KeyEventArgs e)
@@ -1226,11 +1301,10 @@ namespace AZQLAUNCHER
 
         private void BtnAddFlag_Click(object sender, RoutedEventArgs e)
         {
-            bool isJa = GetEffectiveLanguage() == "ja";
             string name = TxtAddFlagName.Text.Trim();
             if (name.Length == 0 || Regex.IsMatch(name, @"[\s""{}:,]"))
             {
-                LblAddFlagDesc.Text = isJa ? "フラグ名を入力してください (空白や記号は使えません)。" : "Enter a valid flag name (no spaces or symbols).";
+                LblAddFlagDesc.Text = T("フラグ名を入力してください (空白や記号は使えません)。", "Enter a valid flag name (no spaces or symbols).");
                 SetFg(LblAddFlagDesc, "ErrBrush");
                 return;
             }
@@ -1246,8 +1320,8 @@ namespace AZQLAUNCHER
             TxtAddFlagValue.Text = "";
             CmbAddFlag.SelectedIndex = -1;
             LblAddFlagDesc.Text = OfficialAllowlist.Contains(name)
-                ? (isJa ? $"✓ {name} を追加しました" : $"✓ Added {name}")
-                : (isJa ? $"追加しました。ただし {name} は公式の許可リスト外なので、現在のRobloxでは無視される可能性があります。" : $"Added, but {name} is not on the official allowlist and may be ignored.");
+                ? (TF($"✓ {name} を追加しました", $"✓ Added {name}"))
+                : (TF($"追加しました。ただし {name} は公式の許可リスト外なので、現在のRobloxでは無視される可能性があります。", $"Added, but {name} is not on the official allowlist and may be ignored."));
             SetFg(LblAddFlagDesc, OfficialAllowlist.Contains(name) ? "OkBrush" : "WarnBrush");
         }
 
@@ -1259,9 +1333,8 @@ namespace AZQLAUNCHER
 
         private void UpdateJsonToggleText()
         {
-            bool isJa = GetEffectiveLanguage() == "ja";
             bool open = JsonEditorPanel.Visibility == Visibility.Visible;
-            BtnToggleJson.Content = (isJa ? "{ }  JSONを直接編集 " : "{ }  Edit JSON directly ") + (open ? "▲" : "▼");
+            BtnToggleJson.Content = (T("{ }  JSONを直接編集 ", "{ }  Edit JSON directly ")) + (open ? "▲" : "▼");
         }
 
         private void ResetFastFlags_Click(object sender, RoutedEventArgs e)
@@ -1280,9 +1353,9 @@ namespace AZQLAUNCHER
             CmbGraphicsApi.SelectedIndex = 0;
             TxtCustomFlags.Text = "{\n  \"DFIntTaskSchedulerTargetFps\": 240\n}";
             SaveSettings();
-            FastFlagsSaveStatusText.Text = GetEffectiveLanguage() == "ja" ? "✓ 初期値にリセットしました" : "✓ Reset to defaults";
+            FastFlagsSaveStatusText.Text = T("✓ 初期値にリセットしました", "✓ Reset to defaults");
             SetFg(FastFlagsSaveStatusText, "InfoBrush");
-            AddLog("FastFlags設定をリセットしました。");
+            AddLog(T("FastFlags設定をリセットしました。", "FastFlags settings reset."));
         }
 
         private void FormatJson_Click(object sender, RoutedEventArgs e)
@@ -1303,13 +1376,13 @@ namespace AZQLAUNCHER
             if (!isLoaded) return;
             SaveSettings();
             ApplyLanguage();
+            RebuildLogView();
             UpdateProtocolStatusText(config.AutoRegisterProtocol);
         }
 
         private void TxtCustomFlags_TextChanged(object sender, TextChangedEventArgs e)
         {
             if (!isLoaded) return;
-            bool isJa = GetEffectiveLanguage() == "ja";
             try
             {
                 var parsed = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(TxtCustomFlags.Text, JsonReadOpts);
@@ -1318,21 +1391,19 @@ namespace AZQLAUNCHER
                     int invalidCount = parsed.Keys.Count(k => !AllowedFastFlags.Contains(k));
                     if (invalidCount > 0)
                     {
-                        JsonStatusText.Text = isJa
-                            ? $"JSON正常 (注意: ホワイトリスト外の {invalidCount} 件は適用時に除外されます)"
-                            : $"JSON Valid ({invalidCount} non-allowlisted keys will be ignored)";
+                        JsonStatusText.Text = TF($"JSON正常 (注意: ホワイトリスト外の {invalidCount} 件は適用時に除外されます)", $"JSON Valid ({invalidCount} non-allowlisted keys will be ignored)");
                         SetFg(JsonStatusText, "WarnBrush");
                     }
                     else
                     {
-                        JsonStatusText.Text = isJa ? "JSONステータス: 正常 (すべてホワイトリスト内)" : "JSON Status: Valid (All allowlisted)";
+                        JsonStatusText.Text = T("JSONステータス: 正常 (すべてホワイトリスト内)", "JSON Status: Valid (All allowlisted)");
                         SetFg(JsonStatusText, "OkBrush");
                     }
                 }
             }
             catch
             {
-                JsonStatusText.Text = isJa ? "JSON構文エラー: 括弧やカンマを確認してください" : "JSON Syntax Error";
+                JsonStatusText.Text = T("JSON構文エラー: 括弧やカンマを確認してください", "JSON Syntax Error");
                 SetFg(JsonStatusText, "ErrBrush");
             }
             if (!syncingFlags) RebuildFlagRows();
@@ -1362,12 +1433,12 @@ namespace AZQLAUNCHER
                 }
 
                 UpdateProtocolStatusText(true);
-                AddLog("ブラウザ連携プロトコル (roblox-player / roblox) を登録しました。");
+                AddLog(T("ブラウザ連携プロトコル (roblox-player / roblox) を登録しました。", "Registered the browser protocol (roblox-player / roblox)."));
             }
             catch (Exception ex)
             {
                 UpdateProtocolStatusText(false, ex.Message);
-                AddLog($"ブラウザ連携プロトコル登録エラー: {ex.Message}");
+                AddLog(TF($"ブラウザ連携プロトコル登録エラー: {ex.Message}", $"Browser protocol registration error: {ex.Message}"));
             }
         }
 
@@ -1377,7 +1448,7 @@ namespace AZQLAUNCHER
             if (args.Length > 1 && (args[1].StartsWith("roblox-player:") || args[1].StartsWith("roblox:")))
             {
                 isRunningAsProtocol = true;
-                AddLog("ブラウザからの起動リクエストを受信しました。");
+                AddLog(T("ブラウザからの起動リクエストを受信しました。", "Received a launch request from the browser."));
 
                 ShowInTaskbar = false;
                 Loaded += (_, __) => Hide();
@@ -1403,7 +1474,7 @@ namespace AZQLAUNCHER
                 var sp = new StackPanel { VerticalAlignment = VerticalAlignment.Center, HorizontalAlignment = HorizontalAlignment.Center };
                 protocolLaunchText = new TextBlock
                 {
-                    Text = GetEffectiveLanguage() == "ja" ? "Robloxを起動中..." : "Launching Roblox...",
+                    Text = T("Robloxを起動中...", "Launching Roblox..."),
                     Foreground = System.Windows.Media.Brushes.White,
                     FontWeight = FontWeights.Bold,
                     FontSize = 16,
@@ -1461,7 +1532,7 @@ namespace AZQLAUNCHER
         {
             if (isLaunching)
             {
-                AddLog("すでに起動処理中のため、新しい起動要求は無視しました。");
+                AddLog(T("すでに起動処理中のため、新しい起動要求は無視しました。", "A launch is already in progress; ignored the new launch request."));
                 return;
             }
 
@@ -1473,7 +1544,7 @@ namespace AZQLAUNCHER
             }
             catch (Exception ex)
             {
-                AddLog($"起動エラー: {ex.Message}");
+                AddLog(TF($"起動エラー: {ex.Message}", $"Launch error: {ex.Message}"));
                 if (!isRunningAsProtocol) LaunchOverlay.Visibility = Visibility.Collapsed;
             }
             finally
@@ -1502,15 +1573,15 @@ namespace AZQLAUNCHER
             }
             if (robloxExe == null)
             {
-                AddLog("エラー: RobloxPlayerBeta.exe が見つかりませんでした。");
-                MessageBox.Show("RobloxPlayerBeta.exe が見つかりません。Robloxがインストールされているか確認してください。", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
+                AddLog(T("エラー: RobloxPlayerBeta.exe が見つかりませんでした。", "Error: RobloxPlayerBeta.exe was not found."));
+                MessageBox.Show(T("RobloxPlayerBeta.exe が見つかりません。Robloxがインストールされているか確認してください。", "RobloxPlayerBeta.exe was not found. Please check that Roblox is installed."), T("エラー", "Error"), MessageBoxButton.OK, MessageBoxImage.Error);
                 if (!isRunningAsProtocol) LaunchOverlay.Visibility = Visibility.Collapsed;
                 else Application.Current.Shutdown();
                 return;
             }
 
             string targetVersionDir = Path.GetDirectoryName(robloxExe)!;
-            AddLog($"対象クライアント検出: {targetVersionDir}");
+            AddLog(TF($"対象クライアント検出: {targetVersionDir}", $"Target client detected: {targetVersionDir}"));
             HashSet<string> knownVersionDirs = GetAllRobloxVersionDirs();
 
             try
@@ -1529,7 +1600,7 @@ namespace AZQLAUNCHER
 
                 if (bypass)
                 {
-                    AddLog("「ランチャーを通さないで起動」モードで標準クライアントを起動します。");
+                    AddLog(T("「ランチャーを通さないで起動」モードで標準クライアントを起動します。", "Launching the stock client in \"Bypass Launcher\" mode."));
                     RestoreMods(targetVersionDir, silent: false);
                     string jsonPath = Path.Combine(targetVersionDir, "ClientSettings", "ClientAppSettings.json");
                     if (File.Exists(jsonPath))
@@ -1547,12 +1618,12 @@ namespace AZQLAUNCHER
                     }
                     else
                     {
-                        AddLog("Mods適用はオフに設定されています。");
+                        AddLog(T("Mods適用はオフに設定されています。", "Mods are turned off in settings."));
                         RestoreMods(targetVersionDir, silent: true);
                     }
                 }
 
-                AddLog("Robloxクライアントを起動しています...");
+                AddLog(T("Robloxクライアントを起動しています...", "Launching the Roblox client..."));
 
                 Process? proc = null;
                 string quotedArgs = string.IsNullOrEmpty(launchArgs) ? "" : "\"" + launchArgs.Replace("\"", "") + "\"";
@@ -1608,12 +1679,12 @@ namespace AZQLAUNCHER
                 UpdateDashboard();
                 if (waitResult.beta != null) proc = waitResult.beta;
                 if (!bypass) ApplyRobloxPriority(waitResult.beta);
-                SetLaunchStatus(GetEffectiveLanguage() == "ja" ? "Robloxを起動しています..." : "Launching Roblox...");
+                SetLaunchStatus(T("Robloxを起動しています...", "Launching Roblox..."));
 
                 Task protectionTask = Task.CompletedTask;
                 if (!bypass && config.EnableMods && config.ProtectCursor && config.CursorMode != "Default")
                 {
-                    AddLog("カーソル上書き保護の監視タスクを開始しました。");
+                    AddLog(T("カーソル上書き保護の監視タスクを開始しました。", "Started the cursor-protection watcher task."));
                     protectionTask = EnforceCursorProtectionAsync(targetVersionDir, proc);
                 }
 
@@ -1632,7 +1703,7 @@ namespace AZQLAUNCHER
                     LaunchOverlay.Visibility = Visibility.Collapsed;
                     Hide();
                     SetTrayStatus(true);
-                    AddLog("Robloxの起動を確認しました。トレイに常駐して監視します。");
+                    AddLog(T("Robloxの起動を確認しました。トレイに常駐して監視します。", "Roblox launch confirmed. Staying in the tray to monitor it."));
 
                     // カーソル保護の確認はバックグラウンドで続ける
                     try { await protectionTask; } catch { }
@@ -1648,7 +1719,7 @@ namespace AZQLAUNCHER
             }
             catch (Exception ex)
             {
-                AddLog($"起動エラー: {ex.Message}");
+                AddLog(TF($"起動エラー: {ex.Message}", $"Launch error: {ex.Message}"));
                 if (!isRunningAsProtocol) LaunchOverlay.Visibility = Visibility.Collapsed;
                 else Application.Current.Shutdown();
             }
@@ -1657,19 +1728,17 @@ namespace AZQLAUNCHER
         // Robloxが未インストールの場合、公式インストーラーを取得して実行し、インストール完了まで待つ。
         private async Task<string?> InstallRobloxAsync(CancellationToken ct)
         {
-            bool isJa = GetEffectiveLanguage() == "ja";
 
             if (!isRunningAsProtocol)
             {
                 var answer = MessageBox.Show(
-                    isJa ? "Robloxが見つかりません。公式インストーラーをダウンロードして、自動でインストールしますか?"
-                         : "Roblox was not found. Download the official installer and install it now?",
+                    T("Robloxが見つかりません。公式インストーラーをダウンロードして、自動でインストールしますか?", "Roblox was not found. Download the official installer and install it now?"),
                     "AZQLAUNCHER", MessageBoxButton.YesNo, MessageBoxImage.Question);
                 if (answer != MessageBoxResult.Yes) return null;
             }
 
-            AddLog("Robloxが見つからないため、公式インストーラーを取得します。");
-            SetLaunchStatus(isJa ? "Robloxのインストーラーをダウンロード中..." : "Downloading the Roblox installer...");
+            AddLog(T("Robloxが見つからないため、公式インストーラーを取得します。", "Roblox was not found; downloading the official installer."));
+            SetLaunchStatus(T("Robloxのインストーラーをダウンロード中...", "Downloading the Roblox installer..."));
 
             string installerPath = Path.Combine(Path.GetTempPath(), "RobloxPlayerInstaller.exe");
             try
@@ -1680,8 +1749,8 @@ namespace AZQLAUNCHER
                     await File.WriteAllBytesAsync(installerPath, data);
                 }
 
-                AddLog("Robloxのインストーラーを実行しました。完了するまで待機します...");
-                SetLaunchStatus(isJa ? "Robloxをインストール中..." : "Installing Roblox...");
+                AddLog(T("Robloxのインストーラーを実行しました。完了するまで待機します...", "Ran the Roblox installer. Waiting for it to finish..."));
+                SetLaunchStatus(T("Robloxをインストール中...", "Installing Roblox..."));
 
                 Process? installer = Process.Start(new ProcessStartInfo
                 {
@@ -1694,7 +1763,7 @@ namespace AZQLAUNCHER
                 {
                     if (ct.IsCancellationRequested)
                     {
-                        AddLog("Robloxのインストール待機をキャンセルしました。");
+                        AddLog(T("Robloxのインストール待機をキャンセルしました。", "Cancelled waiting for the Roblox installation."));
                         return null;
                     }
 
@@ -1703,26 +1772,26 @@ namespace AZQLAUNCHER
                     {
                         // ファイルの書き込みが終わるのを少し待つ
                         await Task.Delay(1500);
-                        AddLog("Robloxのインストールが完了しました。");
+                        AddLog(T("Robloxのインストールが完了しました。", "Roblox installation completed."));
                         return exe;
                     }
 
                     bool installerAlive = installer != null && !installer.HasExited;
                     if (!installerAlive && !IsRobloxUpdaterRunning() && sw.Elapsed > TimeSpan.FromSeconds(30))
                     {
-                        AddLog("Robloxのインストールを確認できませんでした (キャンセルされた可能性があります)。");
+                        AddLog(T("Robloxのインストールを確認できませんでした (キャンセルされた可能性があります)。", "Could not confirm the Roblox installation (it may have been cancelled)."));
                         return null;
                     }
 
                     await Task.Delay(500);
                 }
 
-                AddLog("Robloxのインストール待機がタイムアウトしました。");
+                AddLog(T("Robloxのインストール待機がタイムアウトしました。", "Timed out waiting for the Roblox installation."));
                 return null;
             }
             catch (Exception ex)
             {
-                AddLog($"Robloxの自動インストールに失敗しました: {ex.Message}");
+                AddLog(TF($"Robloxの自動インストールに失敗しました: {ex.Message}", $"Automatic Roblox installation failed: {ex.Message}"));
                 return null;
             }
         }
@@ -1743,17 +1812,16 @@ namespace AZQLAUNCHER
                 else idleSeconds = 0;
                 await Task.Delay(1000);
             }
-            AddLog("Robloxが終了したため、ランチャーも終了します。");
+            AddLog(T("Robloxが終了したため、ランチャーも終了します。", "Roblox has exited, so the launcher is exiting too."));
         }
 
         private void InitTray()
         {
-            bool isJa = GetEffectiveLanguage() == "ja";
             var menu = new System.Windows.Forms.ContextMenuStrip();
-            menu.Items.Add(isJa ? "ランチャーを開く" : "Open Launcher", null, (_, __) => Dispatcher.Invoke(ShowFromTray));
-            menu.Items.Add(isJa ? "Robloxを起動" : "Launch Roblox", null, (_, __) => Dispatcher.Invoke(() => LaunchRobloxClient("", bypass: false)));
+            menu.Items.Add(T("ランチャーを開く", "Open Launcher"), null, (_, __) => Dispatcher.Invoke(ShowFromTray));
+            menu.Items.Add(T("Robloxを起動", "Launch Roblox"), null, (_, __) => Dispatcher.Invoke(() => LaunchRobloxClient("", bypass: false)));
             menu.Items.Add(new System.Windows.Forms.ToolStripSeparator());
-            menu.Items.Add(isJa ? "終了" : "Exit", null, (_, __) => Dispatcher.Invoke(() => Application.Current.Shutdown()));
+            menu.Items.Add(T("終了", "Exit"), null, (_, __) => Dispatcher.Invoke(() => Application.Current.Shutdown()));
 
             trayIcon = new System.Windows.Forms.NotifyIcon
             {
@@ -1779,9 +1847,8 @@ namespace AZQLAUNCHER
         private void SetTrayStatus(bool robloxRunning)
         {
             if (trayIcon == null) return;
-            bool isJa = GetEffectiveLanguage() == "ja";
             trayIcon.Text = robloxRunning
-                ? (isJa ? "AZQLAUNCHER - Roblox実行中" : "AZQLAUNCHER - Roblox running")
+                ? (T("AZQLAUNCHER - Roblox実行中", "AZQLAUNCHER - Roblox running"))
                 : "AZQLAUNCHER";
         }
 
@@ -1884,7 +1951,6 @@ namespace AZQLAUNCHER
         // Robloxが実際に起動するまで待つ。更新で新しいバージョンフォルダが作られた場合は、そちらにFastFlags/Modsを適用する。
         private async Task<(Process? beta, string versionDir)> WaitForRobloxStartAsync(string initialVersionDir, HashSet<string> knownDirs, bool bypass, CancellationToken ct)
         {
-            bool isJa = GetEffectiveLanguage() == "ja";
             string currentDir = initialVersionDir;
             bool showedUpdating = false;
             bool appliedToNewVersion = false;
@@ -1894,7 +1960,7 @@ namespace AZQLAUNCHER
             {
                 if (ct.IsCancellationRequested)
                 {
-                    AddLog("Robloxの起動待機をキャンセルしました。");
+                    AddLog(T("Robloxの起動待機をキャンセルしました。", "Cancelled waiting for Roblox to launch."));
                     return (null, currentDir);
                 }
 
@@ -1909,7 +1975,7 @@ namespace AZQLAUNCHER
                 {
                     appliedToNewVersion = true;
                     currentDir = latestDir;
-                    AddLog($"Robloxの更新を検出しました。新しいバージョンに設定を適用します: {Path.GetFileName(latestDir)}");
+                    AddLog(TF($"Robloxの更新を検出しました。新しいバージョンに設定を適用します: {Path.GetFileName(latestDir)}", $"Roblox update detected. Applying settings to the new version: {Path.GetFileName(latestDir)}"));
                     if (!bypass)
                     {
                         try
@@ -1919,14 +1985,14 @@ namespace AZQLAUNCHER
                         }
                         catch (Exception ex)
                         {
-                            AddLog($"更新後の設定適用エラー: {ex.Message}");
+                            AddLog(TF($"更新後の設定適用エラー: {ex.Message}", $"Error applying settings after update: {ex.Message}"));
                         }
                     }
                 }
 
                 if (beta != null)
                 {
-                    if (showedUpdating) AddLog("Robloxの更新が完了し、起動しました。");
+                    if (showedUpdating) AddLog(T("Robloxの更新が完了し、起動しました。", "Roblox finished updating and launched."));
                     return (beta, currentDir);
                 }
 
@@ -1935,24 +2001,24 @@ namespace AZQLAUNCHER
                 if (looksLikeUpdate && !showedUpdating)
                 {
                     showedUpdating = true;
-                    AddLog("Robloxのアップデート中です。完了するまで待機します...");
+                    AddLog(T("Robloxのアップデート中です。完了するまで待機します...", "Roblox is updating. Waiting for it to finish..."));
                 }
                 if (showedUpdating)
                 {
-                    SetLaunchStatus(isJa ? "Robloxをアップデート中..." : "Updating Roblox...");
+                    SetLaunchStatus(T("Robloxをアップデート中...", "Updating Roblox..."));
                 }
 
                 // 何も動いておらず更新も無いまま猶予を過ぎたら終了 (キャンセルされた場合など)
                 if (!updaterRunning && !newDirExists && sw.Elapsed > TimeSpan.FromSeconds(20))
                 {
-                    AddLog("Robloxの起動を確認できませんでした (キャンセルされた可能性があります)。");
+                    AddLog(T("Robloxの起動を確認できませんでした (キャンセルされた可能性があります)。", "Could not confirm Roblox launched (it may have been cancelled)."));
                     return (null, currentDir);
                 }
 
                 await Task.Delay(500);
             }
 
-            AddLog("Robloxの起動待機がタイムアウトしました。");
+            AddLog(T("Robloxの起動待機がタイムアウトしました。", "Timed out waiting for Roblox to launch."));
             return (null, currentDir);
         }
 
@@ -1965,7 +2031,7 @@ namespace AZQLAUNCHER
                 if (robloxProcess != null && robloxProcess.HasExited) break;
                 try { await ApplyCursorModAsync(versionDir, silent: true); } catch { }
             }
-            AddLog("カーソル上書き保護チェックが完了しました。");
+            AddLog(T("カーソル上書き保護チェックが完了しました。", "Cursor-protection check completed."));
         }
 
         private async Task ApplyCursorModAsync(string versionDir, bool silent = false)
@@ -2000,7 +2066,7 @@ namespace AZQLAUNCHER
                         CopyModFile(versionDir, sysIbeamPng, Path.Combine(folder, "IBeamCursor.png"));
                     }
                 }
-                if (!silent) AddLog("Windowsで現在設定中のカーソルを適用しました。");
+                if (!silent) AddLog(T("Windowsで現在設定中のカーソルを適用しました。", "Applied the cursor currently set in Windows."));
                 return;
             }
 
@@ -2017,7 +2083,7 @@ namespace AZQLAUNCHER
                         CopyModFile(versionDir, classicArrow, Path.Combine(folder, "ArrowCursor.png"));
                         CopyModFile(versionDir, File.Exists(classicFar) ? classicFar : classicArrow, Path.Combine(folder, "ArrowFarCursor.png"));
                     }
-                    if (!silent) AddLog("内蔵のクラシックカーソルを適用しました。");
+                    if (!silent) AddLog(T("内蔵のクラシックカーソルを適用しました。", "Applied the built-in classic cursor."));
                 }
                 else
                 {
@@ -2035,11 +2101,11 @@ namespace AZQLAUNCHER
                             CopyModFile(versionDir, classicArrow, Path.Combine(folder, "ArrowCursor.png"));
                             CopyModFile(versionDir, classicFar, Path.Combine(folder, "ArrowFarCursor.png"));
                         }
-                        if (!silent) AddLog("昔のクラシックカーソルを適用しました。");
+                        if (!silent) AddLog(T("昔のクラシックカーソルを適用しました。", "Applied the legacy classic cursor."));
                     }
                     catch (Exception ex)
                     {
-                        if (!silent) AddLog($"クラシックカーソル取得エラー: {ex.Message}");
+                        if (!silent) AddLog(TF($"クラシックカーソル取得エラー: {ex.Message}", $"Classic cursor download error: {ex.Message}"));
                     }
                 }
                 return;
@@ -2057,7 +2123,7 @@ namespace AZQLAUNCHER
                         CopyModFile(versionDir, config.CustomCursorPath, Path.Combine(folder, fileName));
                     }
                 }
-                if (!silent) AddLog($"カスタムカーソルを適用しました (保護: {(config.ProtectCursor ? "ON" : "OFF")})");
+                if (!silent) AddLog(TF($"カスタムカーソルを適用しました (保護: {(config.ProtectCursor ? "ON" : "OFF")})", $"Applied custom cursor (protection: {(config.ProtectCursor ? "ON" : "OFF")})"));
             }
         }
 
@@ -2210,7 +2276,7 @@ namespace AZQLAUNCHER
                         catch (Exception ex)
                         {
                             failed++;
-                            AddLog($"元ファイルの復元に失敗: {rel} ({ex.Message})");
+                            AddLog(TF($"元ファイルの復元に失敗: {rel} ({ex.Message})", $"Failed to restore original file: {rel} ({ex.Message})"));
                         }
                     }
                 }
@@ -2230,7 +2296,7 @@ namespace AZQLAUNCHER
                     catch (Exception ex)
                     {
                         failed++;
-                        AddLog($"追加ファイルの削除に失敗: {rel} ({ex.Message})");
+                        AddLog(TF($"追加ファイルの削除に失敗: {rel} ({ex.Message})", $"Failed to delete added file: {rel} ({ex.Message})"));
                     }
                 }
 
@@ -2242,12 +2308,12 @@ namespace AZQLAUNCHER
             }
             catch (Exception ex)
             {
-                AddLog($"Modsの復元中にエラー: {ex.Message}");
+                AddLog(TF($"Modsの復元中にエラー: {ex.Message}", $"Error while restoring Mods: {ex.Message}"));
             }
 
             if (!silent || restored > 0)
             {
-                AddLog($"Modsを元に戻しました ({restored} ファイル{(failed > 0 ? $"、失敗 {failed}" : "")})。");
+                AddLog(TF($"Modsを元に戻しました ({restored} ファイル{(failed > 0 ? $"、失敗 {failed}" : "")})。", $"Restored Mods ({restored} files{(failed > 0 ? TF($"、失敗 {failed}", $", {failed} failed") : "")})."));
             }
             return restored;
         }
@@ -2281,7 +2347,7 @@ namespace AZQLAUNCHER
             if (config.CleanClientSettings && File.Exists(jsonPath))
             {
                 try { File.Delete(jsonPath); } catch { }
-                AddLog("既存の ClientAppSettings.json をクリーンアップしました。");
+                AddLog(T("既存の ClientAppSettings.json をクリーンアップしました。", "Cleaned up the existing ClientAppSettings.json."));
             }
 
             var finalFlags = new Dictionary<string, object>();
@@ -2301,7 +2367,7 @@ namespace AZQLAUNCHER
                             }
                             else
                             {
-                                AddLog($"[FastFlags] ホワイトリスト外のキーを除外: {kvp.Key}");
+                                AddLog(TF($"[FastFlags] ホワイトリスト外のキーを除外: {kvp.Key}", $"[FastFlags] Excluded key not on the allowlist: {kvp.Key}"));
                             }
                         }
                     }
@@ -2363,8 +2429,8 @@ namespace AZQLAUNCHER
                 string outputJson = JsonSerializer.Serialize(finalFlags, new JsonSerializerOptions { WriteIndented = true });
                 File.WriteAllText(jsonPath, outputJson);
                 foreach (string k in finalFlags.Keys.Where(k => !OfficialAllowlist.Contains(k)))
-                    AddLog($"[FastFlags] 注意: {k} はRoblox公式の許可リストにないため、現在のRobloxでは無視される可能性があります。");
-                AddLog($"FastFlags を {finalFlags.Count} 件適用しました。");
+                    AddLog(TF($"[FastFlags] 注意: {k} はRoblox公式の許可リストにないため、現在のRobloxでは無視される可能性があります。", $"[FastFlags] Note: {k} is not on Roblox's official allowlist and may be ignored by the current client."));
+                AddLog(TF($"FastFlags を {finalFlags.Count} 件適用しました。", $"Applied {finalFlags.Count} FastFlags."));
             }
         }
 
@@ -2377,7 +2443,7 @@ namespace AZQLAUNCHER
             if (Directory.Exists(modsDir))
             {
                 CopyDirectory(modsDir, versionDir);
-                AddLog("汎用 Mods フォルダのファイルをコピーしました。");
+                AddLog(T("汎用 Mods フォルダのファイルをコピーしました。", "Copied files from the General Mods folder."));
             }
 
             await ApplyCursorModAsync(versionDir);
@@ -2392,11 +2458,11 @@ namespace AZQLAUNCHER
                     BackupBeforeWrite(versionDir, destOuch);
                     if (File.Exists(destOuch)) File.SetAttributes(destOuch, FileAttributes.Normal);
                     File.Copy(config.DeathSoundPath, destOuch, true);
-                    AddLog($"死亡音を適用しました: {config.DeathSoundDisplayName}");
+                    AddLog(TF($"死亡音を適用しました: {config.DeathSoundDisplayName}", $"Applied death sound: {config.DeathSoundDisplayName}"));
                 }
                 catch (Exception ex)
                 {
-                    AddLog($"死亡音適用エラー: {ex.Message}");
+                    AddLog(TF($"死亡音適用エラー: {ex.Message}", $"Death sound apply error: {ex.Message}"));
                 }
             }
 
@@ -2426,13 +2492,13 @@ namespace AZQLAUNCHER
                             }
                             catch (Exception ex)
                             {
-                                AddLog($"スカイボックス適用エラー ({face}): {ex.Message}");
+                                AddLog(TF($"スカイボックス適用エラー ({face}): {ex.Message}", $"Skybox apply error ({face}): {ex.Message}"));
                             }
                             break;
                         }
                     }
                 }
-                AddLog($"カスタムスカイボックスを適用しました ({appliedCount} 面)。");
+                AddLog(TF($"カスタムスカイボックスを適用しました ({appliedCount} 面)。", $"Applied custom skybox ({appliedCount} faces)."));
             }
 
             if (!string.IsNullOrEmpty(config.CustomFontPath) && File.Exists(config.CustomFontPath))
@@ -2466,11 +2532,11 @@ namespace AZQLAUNCHER
                             }
                             catch (Exception ex)
                             {
-                                AddLog($"フォント適用エラー ({fontName}): {ex.Message}");
+                                AddLog(TF($"フォント適用エラー ({fontName}): {ex.Message}", $"Font apply error ({fontName}): {ex.Message}"));
                             }
                         }
                     }
-                    AddLog($"カスタムフォントを適用しました: {Path.GetFileName(config.CustomFontPath)}");
+                    AddLog(TF($"カスタムフォントを適用しました: {Path.GetFileName(config.CustomFontPath)}", $"Applied custom font: {Path.GetFileName(config.CustomFontPath)}"));
                 }
             }
         }
@@ -2499,7 +2565,7 @@ namespace AZQLAUNCHER
                 }
                 catch (Exception ex)
                 {
-                    AddLog($"Modコピー失敗: {Path.GetFileName(newPath)} ({ex.Message})");
+                    AddLog(TF($"Modコピー失敗: {Path.GetFileName(newPath)} ({ex.Message})", $"Mod copy failed: {Path.GetFileName(newPath)} ({ex.Message})"));
                 }
             }
         }
@@ -2508,14 +2574,14 @@ namespace AZQLAUNCHER
         {
             var dialog = new OpenFileDialog
             {
-                Title = "カスタムカーソル画像 (.png) を選択",
-                Filter = "PNG画像 (*.png)|*.png|すべてのファイル (*.*)|*.*"
+                Title = T("カスタムカーソル画像 (.png) を選択", "Select custom cursor image (.png)"),
+                Filter = T("PNG画像 (*.png)|*.png|すべてのファイル (*.*)|*.*", "PNG images (*.png)|*.png|All files (*.*)|*.*")
             };
             if (dialog.ShowDialog() == true)
             {
                 config.CustomCursorPath = dialog.FileName;
                 CursorPathText.Text = Path.GetFileName(dialog.FileName);
-                AddLog($"カスタムカーソルを選択: {Path.GetFileName(dialog.FileName)}");
+                AddLog(TF($"カスタムカーソルを選択: {Path.GetFileName(dialog.FileName)}", $"Selected custom cursor: {Path.GetFileName(dialog.FileName)}"));
                 SaveSettings();
             }
         }
@@ -2523,8 +2589,8 @@ namespace AZQLAUNCHER
         private void ClearCursor_Click(object sender, RoutedEventArgs e)
         {
             config.CustomCursorPath = "";
-            CursorPathText.Text = GetEffectiveLanguage() == "ja" ? "未設定" : "Not set";
-            AddLog("カスタムカーソル設定を解除しました。");
+            CursorPathText.Text = T("未設定", "Not set");
+            AddLog(T("カスタムカーソル設定を解除しました。", "Cleared the custom cursor setting."));
             SaveSettings();
         }
 
@@ -2535,15 +2601,15 @@ namespace AZQLAUNCHER
             if (File.Exists(localOofPath))
             {
                 config.DeathSoundPath = localOofPath;
-                config.DeathSoundDisplayName = "クラシック Oof 音 (内蔵アセット)";
+                config.DeathSoundDisplayName = "Classic Oof (built-in)";
                 ApplyLanguage();
-                AddLog("内蔵のクラシック Oof 音を設定しました（オフライン動作対応）。");
+                AddLog(T("内蔵のクラシック Oof 音を設定しました（オフライン動作対応）。", "Set the built-in classic Oof sound (works offline)."));
                 SaveSettings();
             }
             else
             {
-                DeathSoundPathText.Text = "エラー: Assets/classic_ouch.ogg が見つかりません。任意の音声ファイルを選択してください。";
-                AddLog("エラー: Assets/classic_ouch.ogg が見つかりませんでした。");
+                DeathSoundPathText.Text = T("エラー: Assets/classic_ouch.ogg が見つかりません。任意の音声ファイルを選択してください。", "Error: Assets/classic_ouch.ogg was not found. Please select an audio file.");
+                AddLog(T("エラー: Assets/classic_ouch.ogg が見つかりませんでした。", "Error: Assets/classic_ouch.ogg was not found."));
             }
         }
 
@@ -2551,8 +2617,8 @@ namespace AZQLAUNCHER
         {
             var dialog = new OpenFileDialog
             {
-                Title = "死亡時の効果音を選択 (.ogg 以外は自動変換されます)",
-                Filter = "音声ファイル (*.ogg;*.mp3;*.wav;*.m4a;*.aac;*.flac;*.wma)|*.ogg;*.mp3;*.wav;*.m4a;*.aac;*.flac;*.wma|すべてのファイル (*.*)|*.*"
+                Title = T("死亡時の効果音を選択 (.ogg 以外は自動変換されます)", "Select death sound (non-.ogg files are converted automatically)"),
+                Filter = T("音声ファイル (*.ogg;*.mp3;*.wav;*.m4a;*.aac;*.flac;*.wma)|*.ogg;*.mp3;*.wav;*.m4a;*.aac;*.flac;*.wma|すべてのファイル (*.*)|*.*", "Audio files (*.ogg;*.mp3;*.wav;*.m4a;*.aac;*.flac;*.wma)|*.ogg;*.mp3;*.wav;*.m4a;*.aac;*.flac;*.wma|All files (*.*)|*.*")
             };
 
             if (dialog.ShowDialog() != true) return;
@@ -2565,7 +2631,7 @@ namespace AZQLAUNCHER
                 config.DeathSoundPath = selectedFile;
                 config.DeathSoundDisplayName = Path.GetFileName(selectedFile);
                 ApplyLanguage();
-                AddLog($"死亡音を設定: {config.DeathSoundDisplayName}");
+                AddLog(TF($"死亡音を設定: {config.DeathSoundDisplayName}", $"Set death sound: {config.DeathSoundDisplayName}"));
                 SaveSettings();
                 return;
             }
@@ -2576,13 +2642,13 @@ namespace AZQLAUNCHER
                 string? ffmpegExe = await EnsureFfmpegAsync();
                 if (ffmpegExe == null)
                 {
-                    DeathSoundPathText.Text = "変換エラー: 音声変換ツール(FFmpeg)の取得に失敗しました。.ogg ファイルを選択してください。";
-                    AddLog("FFmpegの取得に失敗したため変換を中止しました。");
+                    DeathSoundPathText.Text = T("変換エラー: 音声変換ツール(FFmpeg)の取得に失敗しました。.ogg ファイルを選択してください。", "Conversion error: failed to download the audio converter (FFmpeg). Please select an .ogg file.");
+                    AddLog(T("FFmpegの取得に失敗したため変換を中止しました。", "Aborted conversion because FFmpeg could not be downloaded."));
                     return;
                 }
 
-                DeathSoundPathText.Text = $"「{Path.GetFileName(selectedFile)}」を Roblox用 .ogg へ変換中...";
-                AddLog($"音声変換を開始: {Path.GetFileName(selectedFile)} -> custom_ouch.ogg");
+                DeathSoundPathText.Text = TF($"「{Path.GetFileName(selectedFile)}」を Roblox用 .ogg へ変換中...", $"Converting \"{Path.GetFileName(selectedFile)}\" to .ogg for Roblox...");
+                AddLog(TF($"音声変換を開始: {Path.GetFileName(selectedFile)} -> custom_ouch.ogg", $"Started audio conversion: {Path.GetFileName(selectedFile)} -> custom_ouch.ogg"));
                 string convertedOggPath = Path.Combine(userAssetsDir, "custom_ouch.ogg");
                 try { if (File.Exists(convertedOggPath)) File.Delete(convertedOggPath); } catch { }
 
@@ -2607,21 +2673,21 @@ namespace AZQLAUNCHER
                 if (exitCode == 0 && File.Exists(convertedOggPath) && new FileInfo(convertedOggPath).Length > 0)
                 {
                     config.DeathSoundPath = convertedOggPath;
-                    config.DeathSoundDisplayName = $"{Path.GetFileName(selectedFile)} (自動OGG変換済み)";
+                    config.DeathSoundDisplayName = $"{Path.GetFileName(selectedFile)} (auto-converted OGG)";
                     ApplyLanguage();
-                    AddLog($"音声変換が完了しました: {config.DeathSoundDisplayName}");
+                    AddLog(TF($"音声変換が完了しました: {config.DeathSoundDisplayName}", $"Audio conversion completed: {config.DeathSoundDisplayName}"));
                     SaveSettings();
                 }
                 else
                 {
-                    DeathSoundPathText.Text = "変換エラー: 音声ファイルの変換に失敗しました。別のファイルをお試しください。";
-                    AddLog("音声変換エラー: 出力ファイルが生成されませんでした。");
+                    DeathSoundPathText.Text = T("変換エラー: 音声ファイルの変換に失敗しました。別のファイルをお試しください。", "Conversion error: failed to convert the audio file. Please try another file.");
+                    AddLog(T("音声変換エラー: 出力ファイルが生成されませんでした。", "Audio conversion error: no output file was produced."));
                 }
             }
             catch (Exception ex)
             {
-                DeathSoundPathText.Text = $"変換エラー: {ex.Message}";
-                AddLog($"音声変換例外: {ex.Message}");
+                DeathSoundPathText.Text = TF($"変換エラー: {ex.Message}", $"Conversion error: {ex.Message}");
+                AddLog(TF($"音声変換例外: {ex.Message}", $"Audio conversion exception: {ex.Message}"));
             }
             finally
             {
@@ -2634,8 +2700,8 @@ namespace AZQLAUNCHER
             string ffmpegPath = Path.Combine(toolsDir, "ffmpeg.exe");
             if (File.Exists(ffmpegPath)) return ffmpegPath;
 
-            DeathSoundPathText.Text = "初回セットアップ: 音声自動変換エンジン (FFmpeg) をダウンロード中...";
-            AddLog("初回セットアップ: FFmpeg をダウンロードしています...");
+            DeathSoundPathText.Text = T("初回セットアップ: 音声自動変換エンジン (FFmpeg) をダウンロード中...", "First-time setup: downloading the audio converter (FFmpeg)...");
+            AddLog(T("初回セットアップ: FFmpeg をダウンロードしています...", "First-time setup: downloading FFmpeg..."));
 
             try
             {
@@ -2656,12 +2722,12 @@ namespace AZQLAUNCHER
                 }
 
                 if (File.Exists(zipPath)) File.Delete(zipPath);
-                AddLog("FFmpeg のセットアップが完了しました。");
+                AddLog(T("FFmpeg のセットアップが完了しました。", "FFmpeg setup completed."));
                 return File.Exists(ffmpegPath) ? ffmpegPath : null;
             }
             catch (Exception ex)
             {
-                AddLog($"FFmpeg ダウンロードエラー: {ex.Message}");
+                AddLog(TF($"FFmpeg ダウンロードエラー: {ex.Message}", $"FFmpeg download error: {ex.Message}"));
                 try { string z = Path.Combine(toolsDir, "ffmpeg.zip"); if (File.Exists(z)) File.Delete(z); } catch { }
                 return null;
             }
@@ -2672,7 +2738,7 @@ namespace AZQLAUNCHER
             config.DeathSoundPath = "";
             config.DeathSoundDisplayName = "";
             ApplyLanguage();
-            AddLog("死亡音設定を解除しました。");
+            AddLog(T("死亡音設定を解除しました。", "Cleared the death sound setting."));
             SaveSettings();
         }
 
@@ -2680,13 +2746,13 @@ namespace AZQLAUNCHER
         {
             var dialog = new OpenFolderDialog
             {
-                Title = "スカイボックス画像 (bk, dn, ft, lf, rt, up) が入ったフォルダを選択"
+                Title = T("スカイボックス画像 (bk, dn, ft, lf, rt, up) が入ったフォルダを選択", "Select the folder containing the skybox images (bk, dn, ft, lf, rt, up)")
             };
             if (dialog.ShowDialog() == true)
             {
                 config.SkyboxFolderPath = dialog.FolderName;
                 SkyboxPathText.Text = Path.GetFileName(dialog.FolderName);
-                AddLog($"スカイボックスフォルダを選択: {dialog.FolderName}");
+                AddLog(TF($"スカイボックスフォルダを選択: {dialog.FolderName}", $"Selected skybox folder: {dialog.FolderName}"));
                 SaveSettings();
             }
         }
@@ -2694,8 +2760,8 @@ namespace AZQLAUNCHER
         private void ClearSkybox_Click(object sender, RoutedEventArgs e)
         {
             config.SkyboxFolderPath = "";
-            SkyboxPathText.Text = GetEffectiveLanguage() == "ja" ? "未設定" : "Not set";
-            AddLog("スカイボックス設定を解除しました。");
+            SkyboxPathText.Text = T("未設定", "Not set");
+            AddLog(T("スカイボックス設定を解除しました。", "Cleared the skybox setting."));
             SaveSettings();
         }
 
@@ -2703,14 +2769,14 @@ namespace AZQLAUNCHER
         {
             var dialog = new OpenFileDialog
             {
-                Title = "カスタムフォントを選択",
-                Filter = "フォントファイル (*.ttf;*.otf)|*.ttf;*.otf|すべてのファイル (*.*)|*.*"
+                Title = T("カスタムフォントを選択", "Select custom font"),
+                Filter = T("フォントファイル (*.ttf;*.otf)|*.ttf;*.otf|すべてのファイル (*.*)|*.*", "Font files (*.ttf;*.otf)|*.ttf;*.otf|All files (*.*)|*.*")
             };
             if (dialog.ShowDialog() == true)
             {
                 config.CustomFontPath = dialog.FileName;
                 FontPathText.Text = Path.GetFileName(dialog.FileName);
-                AddLog($"カスタムフォントを選択: {Path.GetFileName(dialog.FileName)}");
+                AddLog(TF($"カスタムフォントを選択: {Path.GetFileName(dialog.FileName)}", $"Selected custom font: {Path.GetFileName(dialog.FileName)}"));
                 SaveSettings();
             }
         }
@@ -2718,12 +2784,12 @@ namespace AZQLAUNCHER
         private void ClearFont_Click(object sender, RoutedEventArgs e)
         {
             config.CustomFontPath = "";
-            FontPathText.Text = GetEffectiveLanguage() == "ja" ? "未設定" : "Not set";
-            AddLog("カスタムフォント設定を解除しました。");
+            FontPathText.Text = T("未設定", "Not set");
+            AddLog(T("カスタムフォント設定を解除しました。", "Cleared the custom font setting."));
             SaveSettings();
         }
 
-        private void ClearLogs_Click(object sender, RoutedEventArgs e) => TxtLogs.Clear();
+        private void ClearLogs_Click(object sender, RoutedEventArgs e) { lock (logLock) logEntries.Clear(); TxtLogs.Clear(); }
 
         private void OpenRobloxLogsFolder_Click(object sender, RoutedEventArgs e)
         {
@@ -2735,7 +2801,7 @@ namespace AZQLAUNCHER
             }
             else
             {
-                AddLog("Robloxのログフォルダが見つかりませんでした。");
+                AddLog(T("Robloxのログフォルダが見つかりませんでした。", "Roblox log folder was not found."));
             }
         }
 
@@ -2750,7 +2816,7 @@ namespace AZQLAUNCHER
             }
             else
             {
-                AddLog("Robloxのインストールフォルダが見つかりませんでした。");
+                AddLog(T("Robloxのインストールフォルダが見つかりませんでした。", "Roblox install folder was not found."));
             }
         }
 
@@ -2775,7 +2841,7 @@ namespace AZQLAUNCHER
             string? exe = GetLatestRobloxExe();
             if (exe == null)
             {
-                AddLog("Robloxのインストールフォルダが見つかりませんでした。");
+                AddLog(T("Robloxのインストールフォルダが見つかりませんでした。", "Roblox install folder was not found."));
                 return;
             }
 
@@ -2788,12 +2854,12 @@ namespace AZQLAUNCHER
                 {
                     Directory.Delete(settingsDir, true);
                 }
-                AddLog("ClientSettings 削除と読み取り専用属性の解除を完了しました。");
-                MessageBox.Show("ClientSettings の削除とファイル属性の初期化が完了しました。", "完了", MessageBoxButton.OK, MessageBoxImage.Information);
+                AddLog(T("ClientSettings 削除と読み取り専用属性の解除を完了しました。", "Deleted ClientSettings and cleared read-only attributes."));
+                MessageBox.Show(T("ClientSettings の削除とファイル属性の初期化が完了しました。", "ClientSettings were deleted and file attributes were reset."), T("完了", "Done"), MessageBoxButton.OK, MessageBoxImage.Information);
             }
             catch (Exception ex)
             {
-                AddLog($"削除エラー: {ex.Message}");
+                AddLog(TF($"削除エラー: {ex.Message}", $"Delete error: {ex.Message}"));
             }
         }
 
@@ -2823,24 +2889,23 @@ namespace AZQLAUNCHER
         private void UpdateRunningStatus()
         {
             if (!IsLoaded && !isLoaded) return;
-            bool isJa = GetEffectiveLanguage() == "ja";
             bool running = false;
             try { running = FindRunningRobloxBeta() != null; } catch { }
 
             string dotKey;
             if (isLaunching)
             {
-                SidebarStatusText.Text = isJa ? "起動処理中..." : "Launching...";
+                SidebarStatusText.Text = T("起動処理中...", "Launching...");
                 dotKey = "WarnBrush";
             }
             else if (running)
             {
-                SidebarStatusText.Text = isJa ? "Roblox 実行中" : "Roblox is running";
+                SidebarStatusText.Text = T("Roblox 実行中", "Roblox is running");
                 dotKey = "OkBrush";
             }
             else
             {
-                SidebarStatusText.Text = isJa ? "Roblox 停止中" : "Roblox is not running";
+                SidebarStatusText.Text = T("Roblox 停止中", "Roblox is not running");
                 dotKey = "TextMutedBrush";
             }
             StatusDot.SetResourceReference(System.Windows.Shapes.Shape.FillProperty, dotKey);
@@ -2923,11 +2988,11 @@ namespace AZQLAUNCHER
             {
                 if (string.IsNullOrEmpty(TxtLogs.Text)) return;
                 System.Windows.Clipboard.SetText(TxtLogs.Text);
-                AddLog("ログをクリップボードにコピーしました。");
+                AddLog(T("ログをクリップボードにコピーしました。", "Copied the logs to the clipboard."));
             }
             catch (Exception ex)
             {
-                AddLog($"クリップボードへのコピーに失敗: {ex.Message}");
+                AddLog(TF($"クリップボードへのコピーに失敗: {ex.Message}", $"Failed to copy to clipboard: {ex.Message}"));
             }
         }
 
@@ -2958,18 +3023,17 @@ namespace AZQLAUNCHER
 
         private void RestoreMods_Click(object sender, RoutedEventArgs e)
         {
-            bool isJa = GetEffectiveLanguage() == "ja";
             string? exe = GetLatestRobloxExe();
             if (exe == null)
             {
-                AddLog("Robloxのインストールフォルダが見つかりませんでした。");
+                AddLog(T("Robloxのインストールフォルダが見つかりませんでした。", "Roblox install folder was not found."));
                 return;
             }
 
             if (FindRunningRobloxBeta() != null)
             {
                 MessageBox.Show(
-                    isJa ? "Robloxが起動中です。Robloxを終了してからもう一度お試しください。" : "Roblox is running. Close it and try again.",
+                    T("Robloxが起動中です。Robloxを終了してからもう一度お試しください。", "Roblox is running. Close it and try again."),
                     "AZQLAUNCHER", MessageBoxButton.OK, MessageBoxImage.Information);
                 return;
             }
@@ -2977,8 +3041,8 @@ namespace AZQLAUNCHER
             int n = RestoreMods(Path.GetDirectoryName(exe)!, silent: false);
             MessageBox.Show(
                 n > 0
-                    ? (isJa ? $"{n} 個のファイルを元に戻しました。" : $"Restored {n} file(s).")
-                    : (isJa ? "元に戻すファイルはありませんでした。" : "Nothing to restore."),
+                    ? (TF($"{n} 個のファイルを元に戻しました。", $"Restored {n} file(s)."))
+                    : (T("元に戻すファイルはありませんでした。", "Nothing to restore.")),
                 "AZQLAUNCHER", MessageBoxButton.OK, MessageBoxImage.Information);
         }
 
@@ -2987,7 +3051,7 @@ namespace AZQLAUNCHER
             SaveSettings();
             var dialog = new SaveFileDialog
             {
-                Title = "設定をエクスポート",
+                Title = T("設定をエクスポート", "Export settings"),
                 FileName = $"azqlauncher-settings-{DateTime.Now:yyyyMMdd}.json",
                 Filter = "JSON (*.json)|*.json"
             };
@@ -2996,28 +3060,27 @@ namespace AZQLAUNCHER
             try
             {
                 File.Copy(configPath, dialog.FileName, true);
-                AddLog($"設定をエクスポートしました: {dialog.FileName}");
+                AddLog(TF($"設定をエクスポートしました: {dialog.FileName}", $"Exported settings: {dialog.FileName}"));
             }
             catch (Exception ex)
             {
-                AddLog($"設定のエクスポートに失敗: {ex.Message}");
+                AddLog(TF($"設定のエクスポートに失敗: {ex.Message}", $"Failed to export settings: {ex.Message}"));
             }
         }
 
         private void ImportSettings_Click(object sender, RoutedEventArgs e)
         {
-            bool isJa = GetEffectiveLanguage() == "ja";
             var dialog = new OpenFileDialog
             {
-                Title = "設定をインポート",
-                Filter = "JSON (*.json)|*.json|すべてのファイル (*.*)|*.*"
+                Title = T("設定をインポート", "Import settings"),
+                Filter = T("JSON (*.json)|*.json|すべてのファイル (*.*)|*.*", "JSON (*.json)|*.json|All files (*.*)|*.*")
             };
             if (dialog.ShowDialog() != true) return;
 
             try
             {
                 var loaded = JsonSerializer.Deserialize<LauncherConfig>(File.ReadAllText(dialog.FileName), JsonReadOpts);
-                if (loaded == null) throw new InvalidDataException("設定を読み取れませんでした。");
+                if (loaded == null) throw new InvalidDataException(T("設定を読み取れませんでした。", "Could not read the settings."));
                 loaded.IsFirstLaunch = false;
                 loaded.RecentGames ??= new List<RecentGame>();
 
@@ -3036,13 +3099,13 @@ namespace AZQLAUNCHER
                 ApplyLanguage();
                 UpdateProtocolStatusText(config.AutoRegisterProtocol);
                 UpdateDashboard();
-                AddLog($"設定をインポートしました: {Path.GetFileName(dialog.FileName)}");
-                MessageBox.Show(isJa ? "設定をインポートしました。" : "Settings imported.", "AZQLAUNCHER", MessageBoxButton.OK, MessageBoxImage.Information);
+                AddLog(TF($"設定をインポートしました: {Path.GetFileName(dialog.FileName)}", $"Imported settings: {Path.GetFileName(dialog.FileName)}"));
+                MessageBox.Show(T("設定をインポートしました。", "Settings imported."), "AZQLAUNCHER", MessageBoxButton.OK, MessageBoxImage.Information);
             }
             catch (Exception ex)
             {
-                AddLog($"設定のインポートに失敗: {ex.Message}");
-                MessageBox.Show((isJa ? "設定のインポートに失敗しました: " : "Failed to import settings: ") + ex.Message,
+                AddLog(TF($"設定のインポートに失敗: {ex.Message}", $"Failed to import settings: {ex.Message}"));
+                MessageBox.Show((T("設定のインポートに失敗しました: ", "Failed to import settings: ")) + ex.Message,
                     "AZQLAUNCHER", MessageBoxButton.OK, MessageBoxImage.Warning);
             }
         }
@@ -3069,7 +3132,6 @@ namespace AZQLAUNCHER
 
         private bool TryParseJoinInput(string input, out RecentGame? game, out string error)
         {
-            bool isJa = GetEffectiveLanguage() == "ja";
             game = null;
             error = "";
 
@@ -3079,7 +3141,7 @@ namespace AZQLAUNCHER
 
             if (text.Length == 0)
             {
-                error = isJa ? "ゲームのURLかプレイスIDを入力してください。" : "Enter a game URL or place ID.";
+                error = T("ゲームのURLかプレイスIDを入力してください。", "Enter a game URL or place ID.");
                 return false;
             }
 
@@ -3102,26 +3164,24 @@ namespace AZQLAUNCHER
 
                 if (placeId.Length == 0 && GetQueryValue(query, "code") != null)
                 {
-                    error = isJa
-                        ? "共有リンク (share?code=...) には未対応です。ゲームページのURL (…/games/数字/…) を使ってください。"
-                        : "Share links (share?code=...) are not supported. Use the game page URL (…/games/<id>/…).";
+                    error = T("共有リンク (share?code=...) には未対応です。ゲームページのURL (…/games/数字/…) を使ってください。", "Share links (share?code=...) are not supported. Use the game page URL (…/games/<id>/…).");
                     return false;
                 }
             }
 
             if (!Regex.IsMatch(placeId, @"^\d{1,20}$"))
             {
-                error = isJa ? "プレイスIDを読み取れませんでした。ゲームページのURLかプレイスID(数字)を貼り付けてください。" : "Couldn't find a place ID. Paste the game page URL or the numeric place ID.";
+                error = T("プレイスIDを読み取れませんでした。ゲームページのURLかプレイスID(数字)を貼り付けてください。", "Couldn't find a place ID. Paste the game page URL or the numeric place ID.");
                 return false;
             }
             if (linkCode.Length > 0 && !Regex.IsMatch(linkCode, @"^[A-Za-z0-9_\-]{1,128}$"))
             {
-                error = isJa ? "プライベートサーバーのリンクコードが不正です。" : "Invalid private server link code.";
+                error = T("プライベートサーバーのリンクコードが不正です。", "Invalid private server link code.");
                 return false;
             }
             if (jobId.Length > 0 && !Regex.IsMatch(jobId, @"^[0-9A-Fa-f\-]{8,64}$"))
             {
-                error = isJa ? "サーバーID (gameInstanceId) が不正です。" : "Invalid server ID (gameInstanceId).";
+                error = T("サーバーID (gameInstanceId) が不正です。", "Invalid server ID (gameInstanceId).");
                 return false;
             }
 
@@ -3173,7 +3233,7 @@ namespace AZQLAUNCHER
         {
             if (isLaunching)
             {
-                QuickJoinStatusText.Text = GetEffectiveLanguage() == "ja" ? "起動処理中です。しばらくお待ちください。" : "A launch is already in progress.";
+                QuickJoinStatusText.Text = T("起動処理中です。しばらくお待ちください。", "A launch is already in progress.");
                 return;
             }
             QuickJoinStatusText.Text = "";
@@ -3191,7 +3251,7 @@ namespace AZQLAUNCHER
             SaveSettings();
             RebuildRecentGames();
 
-            AddLog($"クイック参加: PlaceId {game.PlaceId}{(string.IsNullOrEmpty(game.LinkCode) ? "" : " (プライベートサーバー)")}{(string.IsNullOrEmpty(game.JobId) ? "" : " (サーバー指定)")}");
+            AddLog(TF($"クイック参加: PlaceId {game.PlaceId}{(string.IsNullOrEmpty(game.LinkCode) ? "" : " (プライベートサーバー)")}{(string.IsNullOrEmpty(game.JobId) ? "" : " (サーバー指定)")}", $"Quick Join: PlaceId {game.PlaceId}{(string.IsNullOrEmpty(game.LinkCode) ? "" : T(" (プライベートサーバー)", " (private server)"))}{(string.IsNullOrEmpty(game.JobId) ? "" : T(" (サーバー指定)", " (specific server)"))}"));
             LaunchRobloxClient(BuildJoinUri(game), bypass: false);
 
             if (string.IsNullOrEmpty(game.Name)) _ = ResolvePlaceNameAsync(game.PlaceId);
@@ -3224,7 +3284,7 @@ namespace AZQLAUNCHER
             {
                 if (string.IsNullOrWhiteSpace(name) || placeId <= 0) return;
                 if (!seen.Add(placeId.ToString())) return;
-                result.Add(new GameSuggestion { Name = name!, PlaceId = placeId.ToString(), Players = players });
+                result.Add(new GameSuggestion { Name = name!, PlaceId = placeId.ToString(), Players = players, PlayersSuffix = T(" 人が参加中", " playing")});
             }
 
             static long GetLong(JsonElement el, string prop)
@@ -3291,7 +3351,7 @@ namespace AZQLAUNCHER
         // 検索中は候補欄の位置に「読み込み中…」とスピナーを出す
         private void ShowLoading()
         {
-            LblSuggestLoading.Text = GetEffectiveLanguage() == "ja" ? "読み込み中…" : "Loading…";
+            LblSuggestLoading.Text = T("読み込み中…", "Loading…");
             SuggestList.ItemsSource = null;
             SuggestList.Visibility = Visibility.Collapsed;
             SuggestLoadingRow.Visibility = Visibility.Visible;
@@ -3301,13 +3361,12 @@ namespace AZQLAUNCHER
 
         private void ShowSuggestions(List<GameSuggestion> list)
         {
-            bool isJa = GetEffectiveLanguage() == "ja";
             SuggestLoadingRow.Visibility = Visibility.Collapsed;
             SuggestList.Visibility = Visibility.Visible;
             if (list.Count == 0)
             {
                 SuggestPanel.Visibility = Visibility.Collapsed;
-                QuickJoinStatusText.Text = isJa ? "該当するゲームが見つかりませんでした。別の名前やURLを試してください。" : "No matching games found. Try another name or a URL.";
+                QuickJoinStatusText.Text = T("該当するゲームが見つかりませんでした。別の名前やURLを試してください。", "No matching games found. Try another name or a URL.");
                 return;
             }
             QuickJoinStatusText.Text = "";
@@ -3391,7 +3450,6 @@ namespace AZQLAUNCHER
         // 「参加」ボタン / Enter でゲーム名が入力されていたとき
         private async Task JoinByNameAsync(string query)
         {
-            bool isJa = GetEffectiveLanguage() == "ja";
 
             // 候補が表示されていれば、選択中のゲームに参加
             if ((SuggestPanel.Visibility == Visibility.Visible) && SuggestList.SelectedItem is GameSuggestion sel)
@@ -3416,7 +3474,7 @@ namespace AZQLAUNCHER
             catch
             {
                 SuggestPanel.Visibility = Visibility.Collapsed;
-                QuickJoinStatusText.Text = isJa ? "検索に失敗しました。ネットワークを確認するか、URLを貼り付けてください。" : "Search failed. Check your connection or paste a URL instead.";
+                QuickJoinStatusText.Text = T("検索に失敗しました。ネットワークを確認するか、URLを貼り付けてください。", "Search failed. Check your connection or paste a URL instead.");
             }
         }
 
@@ -3437,7 +3495,6 @@ namespace AZQLAUNCHER
 
         private void RebuildRecentGames()
         {
-            bool isJa = GetEffectiveLanguage() == "ja";
             RecentGamesPanel.Children.Clear();
             LblRecentTitle.Visibility = config.RecentGames.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
 
@@ -3460,7 +3517,7 @@ namespace AZQLAUNCHER
                 btn.Click += RecentGame_Click;
 
                 var menu = new ContextMenu();
-                var remove = new MenuItem { Header = isJa ? "履歴から削除" : "Remove from history", Tag = g };
+                var remove = new MenuItem { Header = T("履歴から削除", "Remove from history"), Tag = g };
                 remove.Click += RemoveRecent_Click;
                 menu.Items.Add(remove);
                 btn.ContextMenu = menu;
@@ -3525,7 +3582,7 @@ namespace AZQLAUNCHER
                 try
                 {
                     trayIcon.ShowBalloonTip(2000, "AZQLAUNCHER",
-                        GetEffectiveLanguage() == "ja" ? "トレイに格納しました。アイコンをダブルクリックで再表示します。" : "Minimized to tray. Double-click the icon to show it again.",
+                        T("トレイに格納しました。アイコンをダブルクリックで再表示します。", "Minimized to tray. Double-click the icon to show it again."),
                         System.Windows.Forms.ToolTipIcon.Info);
                 }
                 catch { }
