@@ -1,5 +1,14 @@
 <!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
 <title>AZQLAUNCHER</title>
+<script>
+/* Pick the language before the page paints. A saved manual choice wins; otherwise ("Auto") the first supported browser language. */
+(function(){var r=document.documentElement,ok={ja:"ja",en:"en",zh:"zh-CN",es:"es"};
+  function detect(){var p=(navigator.languages&&navigator.languages.length)?navigator.languages:[navigator.language||navigator.userLanguage||""];
+    for(var i=0;i<p.length;i++){var c=String(p[i]).toLowerCase().slice(0,2);if(ok[c])return c}return "en"}
+  var saved=null;try{saved=localStorage.getItem("azq-lang")}catch(e){}
+  var auto=!ok[saved],l=auto?detect():saved;
+  window.azqDetect=detect;r.setAttribute("data-lang",l);r.setAttribute("data-auto",auto?"1":"0");r.lang=ok[l]})();
+</script>
 <meta name="claude:viewport-fit-sides" content="cover">
 <style>
 /* Layout: one-column editorial scroll; hero pairs headline with a drawn replica of the app window. Dark-first, accents taken from the app itself. */
@@ -24,7 +33,9 @@
 *{box-sizing:border-box}
 body{background:var(--bg);color:var(--fg);font:400 16px/1.75 var(--font-body);
   padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:0}
-html[data-lang="en"] .ja,html[data-lang="ja"] .en{display:none}
+/* one language visible at a time; no data-lang (script blocked) falls back to Japanese */
+html[data-lang="ja"] :is(.en,.zh,.es),html[data-lang="en"] :is(.ja,.zh,.es),html[data-lang="zh"] :is(.ja,.en,.es),html[data-lang="es"] :is(.ja,.en,.zh),html:not([data-lang]) :is(.en,.zh,.es){display:none}
+:root[lang^="zh"]{--font-display:"Segoe UI","Microsoft YaHei UI","PingFang SC","Noto Sans SC",system-ui,sans-serif;--font-body:"Segoe UI","Microsoft YaHei UI","PingFang SC","Noto Sans SC",system-ui,sans-serif}
 a{color:inherit}
 :focus-visible{outline:2px solid var(--accent);outline-offset:3px;border-radius:4px}
 .wrap{max-width:1040px;margin:0 auto}
@@ -39,10 +50,15 @@ nav.links a:hover{color:var(--fg)}
 .seg{display:inline-flex;border:1px solid var(--line);border-radius:999px;padding:2px}
 .seg button{font:500 12px var(--font-mono);background:none;border:0;color:var(--muted);padding:4px 11px;border-radius:999px;cursor:pointer}
 .seg button[aria-pressed="true"]{background:var(--grad);color:var(--on-accent)}
+.seg button[data-l="auto"][aria-pressed="true"]{background:none;color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)}
 
 .hero{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.15fr);gap:48px;align-items:center;padding-block:56px 72px}
 .eyebrow{font:500 12px var(--font-mono);letter-spacing:.12em;color:var(--accent);text-transform:uppercase}
 h1{font:800 clamp(34px,5.4vw,60px)/1.08 var(--font-display);letter-spacing:-.02em;margin:14px 0 18px;text-wrap:balance}
+.hero>*{min-width:0}
+h1,h2,.lead{overflow-wrap:break-word;hyphens:auto}
+:root[lang="es"] h1{font-size:clamp(30px,4.2vw,48px)}
+:root[lang="es"] .main{max-height:520px}
 .lead{color:var(--muted);max-width:46ch;margin:0 0 28px}
 .cta{display:flex;gap:12px;flex-wrap:wrap}
 .btn{display:inline-block;text-decoration:none;font:700 14px var(--font-display);padding:13px 22px;border-radius:10px;border:1px solid var(--line)}
@@ -86,10 +102,10 @@ h1{font:800 clamp(34px,5.4vw,60px)/1.08 var(--font-display);letter-spacing:-.02e
 .stat small{display:block;color:var(--w-muted);font-size:11px}
 .stat strong{display:block;font-weight:700;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .stat.ok strong{color:var(--w-ok)}
-.qj{border:1px solid var(--w-line);border-radius:12px;padding:14px;display:grid;gap:8px;min-width:0}
+.qj{border:1px solid var(--w-line);border-radius:12px;padding:14px;display:grid;grid-template-columns:minmax(0,1fr);gap:8px;min-width:0}
 .qj .t{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-weight:700;font-size:14px}
 .qj .t em{font-style:normal;font-size:11px;font-weight:700;color:#fff;background:#4f6bff;border-radius:999px;padding:1px 10px}
-.qj p{margin:0;color:var(--w-muted);font-size:11px;line-height:1.5}
+.qj p{min-width:0;overflow-wrap:anywhere;margin:0;color:var(--w-muted);font-size:11px;line-height:1.5}
 .qj .row{display:flex;gap:10px;align-items:stretch}
 .qj .in{flex:1;min-width:0;border:1px solid #8fa3ff;border-radius:9px;padding:10px 12px;color:#8b93b2;background:#fff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .qj .jb{flex:none;padding:10px 22px;border-radius:9px;background:var(--grad);color:#fff;font-weight:700}
@@ -117,7 +133,7 @@ pre,code{font-family:var(--font-mono)}
 table{border-collapse:collapse;width:100%;font-size:14px}
 th,td{text-align:left;padding:10px 14px;border-bottom:1px solid var(--line);vertical-align:top}
 th{font:500 12px var(--font-mono);color:var(--muted);letter-spacing:.08em;text-transform:uppercase}
-td:first-child{font-family:var(--font-mono);font-size:13px;white-space:nowrap}
+td:first-child{font-family:var(--font-mono);font-size:13px;min-width:12em}
 .note{border:1px solid var(--line);border-left:3px solid var(--warn);border-radius:10px;padding:14px 18px;color:var(--muted);font-size:14px;background:var(--bg2)}
 footer{padding-block:40px 56px;border-top:1px solid var(--line);color:var(--muted);font-size:13px;display:grid;gap:8px}
 @media (max-width:820px){
@@ -131,16 +147,19 @@ footer{padding-block:40px 56px;border-top:1px solid var(--line);color:var(--mute
 
 <div class="wrap">
 <header class="top">
-  <div class="logo"><span class="mark"></span>AZQLAUNCHER<span class="badge">beta0.0.5</span></div>
+  <div class="logo"><span class="mark"></span>AZQLAUNCHER<span class="badge">beta0.0.6</span></div>
   <nav class="links" aria-label="Sections">
-    <a href="#features"><span class="ja">機能</span><span class="en">Features</span></a>
+    <a href="#features"><span class="ja">機能</span><span class="en">Features</span><span class="zh">功能</span><span class="es">Funciones</span></a>
     <a href="#flags">FastFlags</a>
     <a href="#mods">Mods</a>
-    <a href="#open"><span class="ja">オープンソース</span><span class="en">Open source</span></a>
-    <a href="#start"><span class="ja">導入</span><span class="en">Install</span></a>
+    <a href="#open"><span class="ja">オープンソース</span><span class="en">Open source</span><span class="zh">开源</span><span class="es">Código abierto</span></a>
+    <a href="#start"><span class="ja">導入</span><span class="en">Install</span><span class="zh">安装</span><span class="es">Instalación</span></a>
     <span class="seg" role="group" aria-label="Language">
-      <button type="button" id="b-ja" aria-pressed="false">日本語</button>
-      <button type="button" id="b-en" aria-pressed="false">EN</button>
+      <button type="button" data-l="auto" aria-pressed="false" title="Auto (browser language)">Auto</button>
+      <button type="button" data-l="ja" lang="ja" aria-pressed="false">日本語</button>
+      <button type="button" data-l="en" lang="en" aria-pressed="false">EN</button>
+      <button type="button" data-l="zh" lang="zh-CN" aria-pressed="false">中文</button>
+      <button type="button" data-l="es" lang="es" aria-pressed="false">ES</button>
     </span>
   </nav>
 </header>
@@ -148,45 +167,45 @@ footer{padding-block:40px 56px;border-top:1px solid var(--line);color:var(--mute
 <div class="hero">
   <div>
     <div class="eyebrow">Open Source · Windows · .NET 8</div>
-    <h1><span class="ja">Robloxを、もっと速く。もっと自分らしく。</span><span class="en">Roblox, faster and unmistakably yours.</span></h1>
-    <p class="lead"><span class="ja">AZQLAUNCHERは、Robloxを起動する前にFPS上限の解放と描画設定を整え、フォント・スカイボックス・カーソル・死亡音まで好みに差し替えるWindows用ランチャーです。難しい設定ファイルは触りません。ファイルを選んでボタンを押すだけで、次の起動から反映されます。</span><span class="en">AZQLAUNCHER is a Windows launcher that unlocks your frame rate and tunes rendering before Roblox starts, then swaps in your own font, skybox, cursor and death sound. No config files to edit. Pick a file, press a button, and it takes effect on the next launch.</span></p>
+    <h1><span class="ja">Robloxを、もっと速く。もっと自分らしく。</span><span class="en">Roblox, faster and unmistakably yours.</span><span class="zh">让 Roblox 更快，更像你自己。</span><span class="es">Roblox, más rápido y inconfundiblemente tuyo.</span></h1>
+    <p class="lead"><span class="ja">AZQLAUNCHERは、Robloxを起動する前にFPS上限の解放と描画設定を整え、フォント・スカイボックス・カーソル・死亡音まで好みに差し替えるWindows用ランチャーです。難しい設定ファイルは触りません。ファイルを選んでボタンを押すだけで、次の起動から反映されます。</span><span class="en">AZQLAUNCHER is a Windows launcher that unlocks your frame rate and tunes rendering before Roblox starts, then swaps in your own font, skybox, cursor and death sound. No config files to edit. Pick a file, press a button, and it takes effect on the next launch.</span><span class="zh">AZQLAUNCHER 是一款 Windows 启动器：在 Roblox 启动前解锁帧率并调整渲染设置，还能换上你自己的字体、天空盒、光标和死亡音效。无需编辑配置文件，选好文件、点一下按钮，下次启动即可生效。</span><span class="es">AZQLAUNCHER es un launcher para Windows que desbloquea tus FPS y ajusta el renderizado antes de iniciar Roblox, y además cambia la fuente, el skybox, el cursor y el sonido de muerte por los tuyos. Sin editar archivos de configuración: elige un archivo, pulsa un botón y se aplica en el siguiente inicio.</span></p>
     <div class="cta">
-      <a class="btn primary" href="https://github.com/Azuk1-azq/azqlauncher/releases/download/beta-0.05/AZQLAUNCHER.zip"><span class="ja">ダウンロード (beta0.0.5)</span><span class="en">Download (beta0.0.5)</span></a>
-      <a class="btn" href="#start"><span class="ja">導入手順を見る</span><span class="en">How to install</span></a>
-      <a class="btn" href="https://github.com/Azuk1-azq/azqlauncher/tree/main"><span class="ja">GitHubでソースを見る</span><span class="en">View source on GitHub</span></a>
+      <a class="btn primary" href="https://github.com/Azuk1-azq/azqlauncher/releases/download/beta-0.06/AZQLAUNCHER.zip"><span class="ja">ダウンロード (beta0.0.6)</span><span class="en">Download (beta0.0.6)</span><span class="zh">下载 (beta0.0.6)</span><span class="es">Descargar (beta0.0.6)</span></a>
+      <a class="btn" href="#start"><span class="ja">導入手順を見る</span><span class="en">How to install</span><span class="zh">查看安装方法</span><span class="es">Cómo instalar</span></a>
+      <a class="btn" href="https://github.com/Azuk1-azq/azqlauncher/tree/main"><span class="ja">GitHubでソースを見る</span><span class="en">View source on GitHub</span><span class="zh">在 GitHub 上查看源码</span><span class="es">Ver el código en GitHub</span></a>
     </div>
-    <div class="meta"><span class="ja">ソースコードはすべて公開 / 許可リスト内のFastFlagsだけを適用 / Robloxの更新後も自動で再適用 / ライト・ダーク両テーマ対応 / ワンクリックで標準起動に戻せます</span><span class="en">Fully open source / Only allowlisted FastFlags / re-applied after every Roblox update / light &amp; dark themes / one click back to stock</span></div>
+    <div class="meta"><span class="ja">ソースコードはすべて公開 / 許可リスト内のFastFlagsだけを適用 / Robloxの更新後も自動で再適用 / ライト・ダーク両テーマ対応 / ワンクリックで標準起動に戻せます</span><span class="en">Fully open source / Only allowlisted FastFlags / re-applied after every Roblox update / light &amp; dark themes / one click back to stock</span><span class="zh">完全开源 / 仅应用白名单内的 FastFlags / Roblox 每次更新后自动重新应用 / 支持浅色和深色主题 / 一键恢复原版</span><span class="es">Totalmente de código abierto / Solo FastFlags de la lista permitida / Se reaplica tras cada actualización de Roblox / Temas claro y oscuro / Vuelve al estándar con un clic</span></div>
   </div>
 
   <div class="win" role="img" aria-label="AZQLAUNCHER dashboard">
-    <div class="bar"><div class="logo"><span class="mark"></span>AZQLAUNCHER<span class="badge">beta0.0.5</span></div><div class="ctl" aria-hidden="true"><span>&ndash;</span><span>&#x2715;</span></div></div>
+    <div class="bar"><div class="logo"><span class="mark"></span>AZQLAUNCHER<span class="badge">beta0.0.6</span></div><div class="ctl" aria-hidden="true"><span>&ndash;</span><span>&#x2715;</span></div></div>
     <div class="body">
       <div class="side">
-        <div class="nav on"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg><span class="ja">ダッシュボード</span><span class="en">Dashboard</span></div>
+        <div class="nav on"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg><span class="ja">ダッシュボード</span><span class="en">Dashboard</span><span class="zh">仪表盘</span><span class="es">Panel</span></div>
         <div class="nav"><svg viewBox="0 0 24 24"><path d="M13 2 4 14h7l-1 8 9-12h-7z"/></svg>FastFlags</div>
-        <div class="nav"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg><span class="ja">スカイボックス・Mods</span><span class="en">Skybox &amp; Mods</span></div>
-        <div class="nav"><svg viewBox="0 0 24 24"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M9 8h6M9 12h6M9 16h4"/></svg><span class="ja">ログ</span><span class="en">Logs</span></div>
-        <div class="nav"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><circle cx="12" cy="12" r="8"/></svg><span class="ja">設定</span><span class="en">Settings</span></div>
+        <div class="nav"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg><span class="ja">スカイボックス・Mods</span><span class="en">Skybox &amp; Mods</span><span class="zh">天空盒和 Mods</span><span class="es">Skybox y Mods</span></div>
+        <div class="nav"><svg viewBox="0 0 24 24"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M9 8h6M9 12h6M9 16h4"/></svg><span class="ja">ログ</span><span class="en">Logs</span><span class="zh">日志</span><span class="es">Registros</span></div>
+        <div class="nav"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><circle cx="12" cy="12" r="8"/></svg><span class="ja">設定</span><span class="en">Settings</span><span class="zh">设置</span><span class="es">Ajustes</span></div>
         <div class="sp"></div>
-        <div class="status"><i></i><span class="ja">Roblox 停止中</span><span class="en">Roblox stopped</span></div>
-        <div class="launch">&#9654; <span class="ja">Robloxを起動</span><span class="en">Launch Roblox</span></div>
+        <div class="status"><i></i><span class="ja">Roblox 停止中</span><span class="en">Roblox stopped</span><span class="zh">Roblox 未运行</span><span class="es">Roblox detenido</span></div>
+        <div class="launch">&#9654; <span class="ja">Robloxを起動</span><span class="en">Launch Roblox</span><span class="zh">启动 Roblox</span><span class="es">Iniciar Roblox</span></div>
       </div>
       <div class="main">
         <div class="qcard">
           <i class="frame f1"></i><i class="frame f2"></i>
-          <div><h3><span class="ja">クイック起動</span><span class="en">Quick Launch</span></h3>
-          <p><span class="ja">設定を適用してRobloxを起動します</span><span class="en">Applies your settings, then launches Roblox</span></p></div>
-          <div class="go"><span>&#9654; <span class="ja">Robloxを直接起動</span><span class="en">Launch Roblox</span></span><span><span class="ja">標準起動 (Modsなし)</span><span class="en">Vanilla Launch</span></span></div>
+          <div><h3><span class="ja">クイック起動</span><span class="en">Quick Launch</span><span class="zh">快速启动</span><span class="es">Inicio rápido</span></h3>
+          <p><span class="ja">設定を適用してRobloxを起動します</span><span class="en">Applies your settings, then launches Roblox</span><span class="zh">应用你的设置后启动 Roblox</span><span class="es">Aplica tus ajustes y luego inicia Roblox</span></p></div>
+          <div class="go"><span>&#9654; <span class="ja">Robloxを直接起動</span><span class="en">Launch Roblox</span><span class="zh">启动 Roblox</span><span class="es">Iniciar Roblox</span></span><span><span class="ja">標準起動 (Modsなし)</span><span class="en">Vanilla Launch</span><span class="zh">原版启动</span><span class="es">Inicio estándar</span></span></div>
         </div>
         <div class="stats">
-          <div class="stat"><small>Roblox <span class="ja">クライアント</span><span class="en">Client</span></small><strong>version-4ea8e85481e34&hellip;</strong></div>
-          <div class="stat"><small>FastFlags</small><strong><span class="ja">1 件を適用</span><span class="en">1 applied</span></strong></div>
-          <div class="stat ok"><small>Mods</small><strong><span class="ja">有効</span><span class="en">Enabled</span></strong></div>
+          <div class="stat"><small>Roblox <span class="ja">クライアント</span><span class="en">Client</span><span class="zh">客户端</span><span class="es">Cliente</span></small><strong>version-4ea8e85481e34&hellip;</strong></div>
+          <div class="stat"><small>FastFlags</small><strong><span class="ja">1 件を適用</span><span class="en">1 applied</span><span class="zh">1 项生效</span><span class="es">1 activo</span></strong></div>
+          <div class="stat ok"><small>Mods</small><strong><span class="ja">有効</span><span class="en">Enabled</span><span class="zh">已启用</span><span class="es">Activos</span></strong></div>
         </div>
         <div class="qj">
-          <div class="t"><span class="ja">クイック参加</span><span class="en">Quick Join</span><em><span class="ja">ゲーム名を入れるだけ</span><span class="en">Just type a game name</span></em></div>
-          <p><span class="ja">ゲーム名 (日本語・英語OK) を入力するだけで、候補から選んで直接参加できます。URL・プレイスID・プライベートサーバーのリンクも使えます</span><span class="en">Type a game name (Japanese or English) and pick from the suggestions to join directly. URLs, place IDs and private server links work too.</span></p>
-          <div class="row"><div class="in"><span class="ja">ゲーム名を入力 (例: Blox Fruits / ブロックスフルーツ)</span><span class="en">Enter a game name (e.g. Blox Fruits)</span></div><div class="jb"><span class="ja">参加</span><span class="en">Join</span></div></div>
+          <div class="t"><span class="ja">クイック参加</span><span class="en">Quick Join</span><span class="zh">快速加入</span><span class="es">Unión rápida</span><em><span class="ja">ゲーム名を入れるだけ</span><span class="en">Just type a game name</span><span class="zh">只需输入游戏名称</span><span class="es">Solo escribe el nombre del juego</span></em></div>
+          <p><span class="ja">ゲーム名 (日本語・英語OK) を入力するだけで、候補から選んで直接参加できます。URL・プレイスID・プライベートサーバーのリンクも使えます</span><span class="en">Type a game name (Japanese or English) and pick from the suggestions to join directly. URLs, place IDs and private server links work too.</span><span class="zh">输入游戏名称（日文或英文均可），从候选中选择即可直接加入。也支持 URL、Place ID 和私人服务器链接。</span><span class="es">Escribe el nombre de un juego (en japonés o inglés) y elige entre las sugerencias para unirte directamente. También funcionan URL, ID de lugar y enlaces de servidor privado.</span></p>
+          <div class="row"><div class="in"><span class="ja">ゲーム名を入力 (例: Blox Fruits / ブロックスフルーツ)</span><span class="en">Enter a game name (e.g. Blox Fruits)</span><span class="zh">输入游戏名称（例如 Blox Fruits）</span><span class="es">Escribe el nombre de un juego (p. ej., Blox Fruits)</span></div><div class="jb"><span class="ja">参加</span><span class="en">Join</span><span class="zh">加入</span><span class="es">Unirse</span></div></div>
         </div>
       </div>
     </div>
@@ -194,27 +213,27 @@ footer{padding-block:40px 56px;border-top:1px solid var(--line);color:var(--mute
 </div>
 
 <section id="features">
-  <h2><span class="ja">起動前にすべて整え、あとは邪魔をしない</span><span class="en">Everything is set before launch, then it steps aside</span></h2>
-  <p class="sub"><span class="ja">ランチャーは、Robloxを起動する直前に設定とModのファイルを書き込みます。起動を見届けると自動で閉じる設定が初期状態なので、遊んでいる間は何も動いていません。</span><span class="en">Right before Roblox starts, the launcher writes your settings and mod files. By default it closes itself once Roblox is running, so nothing of it stays open while you play.</span></p>
+  <h2><span class="ja">起動前にすべて整え、あとは邪魔をしない</span><span class="en">Everything is set before launch, then it steps aside</span><span class="zh">启动前全部就绪，之后不再打扰</span><span class="es">Todo listo antes de iniciar, y luego se aparta</span></h2>
+  <p class="sub"><span class="ja">ランチャーは、Robloxを起動する直前に設定とModのファイルを書き込みます。起動を見届けると自動で閉じる設定が初期状態なので、遊んでいる間は何も動いていません。</span><span class="en">Right before Roblox starts, the launcher writes your settings and mod files. By default it closes itself once Roblox is running, so nothing of it stays open while you play.</span><span class="zh">在 Roblox 启动前一刻，启动器会写入你的设置和 Mod 文件。默认在确认 Roblox 运行后自动关闭，所以你游玩时它不会占用任何资源。</span><span class="es">Justo antes de que arranque Roblox, el launcher escribe tus ajustes y archivos de Mods. Por defecto se cierra solo cuando Roblox ya está en marcha, así que no queda nada abierto mientras juegas.</span></p>
   <div class="grid">
-    <div class="card"><span class="tag">FastFlags</span><h3><span class="ja">FPS上限の解放と描画設定</span><span class="en">FPS unlock and rendering</span></h3><p><span class="ja">目標FPS、PostFXの無効化、レンダリング品質の軽量化、描画API(D3D11 / D3D10 / Vulkan / OpenGL)を画面から選べます。</span><span class="en">Set a target FPS, disable PostFX, lower render quality and pick a graphics API (D3D11, D3D10, Vulkan, OpenGL) from the UI.</span></p></div>
-    <div class="card"><span class="tag">Mods</span><h3><span class="ja">見た目と音のカスタマイズ</span><span class="en">Look and sound</span></h3><p><span class="ja">カーソル、死亡時の効果音、スカイボックス、UIフォントを差し替えます。汎用Modsフォルダのファイルもそのままコピーされます。</span><span class="en">Replace the cursor, death sound, skybox and UI font. Anything in the general Mods folder is copied in as well.</span></p></div>
-    <div class="card"><span class="tag">Browser</span><h3><span class="ja">ブラウザからそのまま起動</span><span class="en">Launch from the browser</span></h3><p><span class="ja">roblox-player と roblox のURIを登録するので、サイトの「プレイ」ボタンからでもランチャー経由で起動できます。</span><span class="en">Registers the roblox-player and roblox URI schemes, so the Play button on the website goes through the launcher.</span></p></div>
-    <div class="card"><span class="tag">Update</span><h3><span class="ja">Robloxの更新に追従</span><span class="en">Survives Roblox updates</span></h3><p><span class="ja">更新で新しいバージョンフォルダが作られたことを検知し、新しい方へFastFlagsとModsを再適用します。更新中はその旨を表示します。上書き前の元ファイルはバックアップされ、「解除」で確実に元へ戻せます。</span><span class="en">Detects the new version folder created by an update and re-applies flags and mods there. It shows an "Updating Roblox" state while it waits. Original files are backed up first, so Clear really restores them.</span></p></div>
-    <div class="card"><span class="tag">Vanilla</span><h3><span class="ja">ワンクリックで標準起動</span><span class="en">One-click vanilla</span></h3><p><span class="ja">「標準起動 (Modsなし)」を押すと、FastFlagsとModsを元に戻して標準のクライアントを起動します。ブラウザ起動時の既定にもできます。</span><span class="en">"Vanilla Launch" restores the original files and starts the stock client. You can make it the default for browser launches too.</span></p></div>
-    <div class="card"><span class="tag">UI</span><h3><span class="ja">日本語と英語に対応</span><span class="en">Japanese and English</span></h3><p><span class="ja">表示言語はシステムに合わせて自動で切り替わり、設定から固定もできます。実行ログもアプリ内で確認できます。</span><span class="en">The language follows your system and can be pinned in Settings. A built-in log view shows what happened on each launch.</span></p></div>
-    <div class="card"><span class="tag">Quick Join</span><h3><span class="ja">ゲームURLを貼ってすぐ参加</span><span class="en">Paste a link and join</span></h3><p><span class="ja">ゲームURL・プレイスID・プライベートサーバーのリンクを貼ってEnterで参加できます。最近遊んだ8件は履歴に残ります。</span><span class="en">Paste a game URL, place ID or private server link and press Enter. Your last 8 games are kept as history.</span></p></div>
-    <div class="card"><span class="tag">Theme</span><h3><span class="ja">ライト / ダーク / システム連動</span><span class="en">Light, dark or follow system</span></h3><p><span class="ja">既定はWindowsの設定に追従し、起動中に切り替えても自動で変わります。設定から手動でも選べます。</span><span class="en">Follows Windows by default and switches live while running. You can also pick one manually in Settings.</span></p></div>
-    <div class="card"><span class="tag">Workflow</span><h3><span class="ja">ショートカットと自動保存</span><span class="en">Shortcuts and autosave</span></h3><p><span class="ja">Ctrl+1〜5でページ移動、Ctrl+Enterで起動、Ctrl+Sで保存して反映。FastFlagsの変更は自動保存され、ウィンドウはリサイズでき、サイズも記憶されます。</span><span class="en">Ctrl+1-5 switch pages, Ctrl+Enter launches, Ctrl+S saves and applies. FastFlags autosave, and the window is resizable and remembers its size.</span></p></div>
-    <div class="card"><span class="tag">Logs</span><h3><span class="ja">ログ保存と設定の持ち運び</span><span class="en">Saved logs and portable settings</span></h3><p><span class="ja">ログは日ごとにファイル保存(14日分)。設定のエクスポート/インポートやFPSプリセット(60 / 144 / 240 / 無制限)にも対応しています。</span><span class="en">Logs are saved per day for 14 days. Settings can be exported and imported, and FPS presets (60 / 144 / 240 / unlimited) are built in.</span></p></div>
+    <div class="card"><span class="tag">FastFlags</span><h3><span class="ja">FPS上限の解放と描画設定</span><span class="en">FPS unlock and rendering</span><span class="zh">解锁 FPS 与渲染设置</span><span class="es">Desbloqueo de FPS y renderizado</span></h3><p><span class="ja">目標FPS、PostFXの無効化、レンダリング品質の軽量化、描画API(D3D11 / D3D10 / Vulkan / OpenGL)を画面から選べます。</span><span class="en">Set a target FPS, disable PostFX, lower render quality and pick a graphics API (D3D11, D3D10, Vulkan, OpenGL) from the UI.</span><span class="zh">可在界面中设置目标 FPS、关闭 PostFX、降低渲染画质，并选择图形 API（D3D11、D3D10、Vulkan、OpenGL）。</span><span class="es">Define un FPS objetivo, desactiva PostFX, reduce la calidad de renderizado y elige la API gráfica (D3D11, D3D10, Vulkan, OpenGL) desde la interfaz.</span></p></div>
+    <div class="card"><span class="tag">Mods</span><h3><span class="ja">見た目と音のカスタマイズ</span><span class="en">Look and sound</span><span class="zh">外观与声音</span><span class="es">Aspecto y sonido</span></h3><p><span class="ja">カーソル、死亡時の効果音、スカイボックス、UIフォントを差し替えます。汎用Modsフォルダのファイルもそのままコピーされます。</span><span class="en">Replace the cursor, death sound, skybox and UI font. Anything in the general Mods folder is copied in as well.</span><span class="zh">替换光标、死亡音效、天空盒和界面字体。通用 Mods 文件夹中的文件也会一并复制。</span><span class="es">Sustituye el cursor, el sonido de muerte, el skybox y la fuente de la interfaz. Todo lo que haya en la carpeta general de Mods también se copia.</span></p></div>
+    <div class="card"><span class="tag">Browser</span><h3><span class="ja">ブラウザからそのまま起動</span><span class="en">Launch from the browser</span><span class="zh">从浏览器直接启动</span><span class="es">Inicia desde el navegador</span></h3><p><span class="ja">roblox-player と roblox のURIを登録するので、サイトの「プレイ」ボタンからでもランチャー経由で起動できます。</span><span class="en">Registers the roblox-player and roblox URI schemes, so the Play button on the website goes through the launcher.</span><span class="zh">注册 roblox-player 和 roblox URI 协议，因此网站上的“播放”按钮也会通过启动器启动。</span><span class="es">Registra los esquemas URI roblox-player y roblox, así que el botón Jugar del sitio web también pasa por el launcher.</span></p></div>
+    <div class="card"><span class="tag">Update</span><h3><span class="ja">Robloxの更新に追従</span><span class="en">Survives Roblox updates</span><span class="zh">更新后依然有效</span><span class="es">Sobrevive a las actualizaciones de Roblox</span></h3><p><span class="ja">更新で新しいバージョンフォルダが作られたことを検知し、新しい方へFastFlagsとModsを再適用します。更新中はその旨を表示します。上書き前の元ファイルはバックアップされ、「解除」で確実に元へ戻せます。</span><span class="en">Detects the new version folder created by an update and re-applies flags and mods there. It shows an "Updating Roblox" state while it waits. Original files are backed up first, so Clear really restores them.</span><span class="zh">检测更新创建的新版本文件夹，并在其中重新应用 FastFlags 和 Mods。等待期间会显示“正在更新 Roblox”状态。覆盖前会先备份原始文件，因此“清除”能真正还原。</span><span class="es">Detecta la nueva carpeta de versión creada por una actualización y vuelve a aplicar allí los FastFlags y los Mods. Mientras espera, muestra el estado «Actualizando Roblox». Los archivos originales se respaldan antes, así que «Quitar» los restaura de verdad.</span></p></div>
+    <div class="card"><span class="tag">Vanilla</span><h3><span class="ja">ワンクリックで標準起動</span><span class="en">One-click vanilla</span><span class="zh">一键原版启动</span><span class="es">Inicio estándar con un clic</span></h3><p><span class="ja">「標準起動 (Modsなし)」を押すと、FastFlagsとModsを元に戻して標準のクライアントを起動します。ブラウザ起動時の既定にもできます。</span><span class="en">"Vanilla Launch" restores the original files and starts the stock client. You can make it the default for browser launches too.</span><span class="zh">“原版启动”会还原原始文件并启动官方客户端，也可以设为浏览器启动时的默认方式。</span><span class="es">«Inicio estándar» restaura los archivos originales e inicia el cliente estándar. También puedes hacerlo el predeterminado para los inicios desde el navegador.</span></p></div>
+    <div class="card"><span class="tag">UI</span><h3><span class="ja">日本語・English・中文・Español に対応</span><span class="en">Japanese, English, Chinese and Spanish</span><span class="zh">支持日语、英语、中文和西班牙语</span><span class="es">Japonés, inglés, chino y español</span></h3><p><span class="ja">表示言語はシステムに合わせて自動で切り替わり、設定から固定もできます。実行ログもアプリ内で確認できます。</span><span class="en">The language follows your system and can be pinned in Settings. A built-in log view shows what happened on each launch.</span><span class="zh">显示语言默认跟随系统，也可在设置中固定。内置的日志视图会显示每次启动时发生的事情。</span><span class="es">El idioma sigue al del sistema y puede fijarse en Ajustes. Una vista de registros integrada muestra lo que pasó en cada inicio.</span></p></div>
+    <div class="card"><span class="tag">Quick Join</span><h3><span class="ja">ゲームURLを貼ってすぐ参加</span><span class="en">Paste a link and join</span><span class="zh">粘贴链接即可加入</span><span class="es">Pega un enlace y únete</span></h3><p><span class="ja">ゲームURL・プレイスID・プライベートサーバーのリンクを貼ってEnterで参加できます。最近遊んだ8件は履歴に残ります。</span><span class="en">Paste a game URL, place ID or private server link and press Enter. Your last 8 games are kept as history.</span><span class="zh">粘贴游戏 URL、Place ID 或私人服务器链接后按 Enter 即可加入。最近玩过的 8 个游戏会保留在历史记录中。</span><span class="es">Pega una URL de juego, un ID de lugar o un enlace de servidor privado y pulsa Enter. Tus últimos 8 juegos se guardan en el historial.</span></p></div>
+    <div class="card"><span class="tag">Theme</span><h3><span class="ja">ライト / ダーク / システム連動</span><span class="en">Light, dark or follow system</span><span class="zh">浅色、深色或跟随系统</span><span class="es">Claro, oscuro o según el sistema</span></h3><p><span class="ja">既定はWindowsの設定に追従し、起動中に切り替えても自動で変わります。設定から手動でも選べます。</span><span class="en">Follows Windows by default and switches live while running. You can also pick one manually in Settings.</span><span class="zh">默认跟随 Windows 设置，运行中切换也会实时生效。也可以在设置中手动选择。</span><span class="es">Sigue la configuración de Windows por defecto y cambia en vivo mientras se ejecuta. También puedes elegir uno manualmente en Ajustes.</span></p></div>
+    <div class="card"><span class="tag">Workflow</span><h3><span class="ja">ショートカットと自動保存</span><span class="en">Shortcuts and autosave</span><span class="zh">快捷键与自动保存</span><span class="es">Atajos y autoguardado</span></h3><p><span class="ja">Ctrl+1〜5でページ移動、Ctrl+Enterで起動、Ctrl+Sで保存して反映。FastFlagsの変更は自動保存され、ウィンドウはリサイズでき、サイズも記憶されます。</span><span class="en">Ctrl+1-5 switch pages, Ctrl+Enter launches, Ctrl+S saves and applies. FastFlags autosave, and the window is resizable and remembers its size.</span><span class="zh">Ctrl+1–5 切换页面，Ctrl+Enter 启动，Ctrl+S 保存并应用。FastFlags 会自动保存，窗口可调整大小并记住尺寸。</span><span class="es">Ctrl+1-5 cambian de página, Ctrl+Enter inicia y Ctrl+S guarda y aplica. Los FastFlags se guardan solos, y la ventana se puede redimensionar y recuerda su tamaño.</span></p></div>
+    <div class="card"><span class="tag">Logs</span><h3><span class="ja">ログ保存と設定の持ち運び</span><span class="en">Saved logs and portable settings</span><span class="zh">保存日志与可移植设置</span><span class="es">Registros guardados y ajustes portátiles</span></h3><p><span class="ja">ログは日ごとにファイル保存(14日分)。設定のエクスポート/インポートやFPSプリセット(60 / 144 / 240 / 無制限)にも対応しています。</span><span class="en">Logs are saved per day for 14 days. Settings can be exported and imported, and FPS presets (60 / 144 / 240 / unlimited) are built in.</span><span class="zh">日志按天保存，保留 14 天。设置可导出和导入，并内置 FPS 预设（60 / 144 / 240 / 无限制）。</span><span class="es">Los registros se guardan por día durante 14 días. Los ajustes se pueden exportar e importar, y hay ajustes preestablecidos de FPS (60 / 144 / 240 / sin límite).</span></p></div>
   </div>
 </section>
 
 <section id="flags">
   <div class="split">
     <div>
-      <h2><span class="ja">許可リストにあるFastFlagsだけを書き込む</span><span class="en">Only allowlisted FastFlags are written</span></h2>
-      <p class="sub" style="margin-bottom:0"><span class="ja">JSONエディタに好きなキーを書けますが、適用されるのは内蔵の許可リストにあるものだけです。それ以外は起動時に除外され、ログに残ります。</span><span class="en">The JSON editor accepts any key, but only entries on the built-in allowlist are applied. The rest are dropped at launch and noted in the log.</span></p>
+      <h2><span class="ja">許可リストにあるFastFlagsだけを書き込む</span><span class="en">Only allowlisted FastFlags are written</span><span class="zh">只写入白名单内的 FastFlags</span><span class="es">Solo se escriben los FastFlags de la lista permitida</span></h2>
+      <p class="sub" style="margin-bottom:0"><span class="ja">JSONエディタに好きなキーを書けますが、適用されるのは内蔵の許可リストにあるものだけです。それ以外は起動時に除外され、ログに残ります。</span><span class="en">The JSON editor accepts any key, but only entries on the built-in allowlist are applied. The rest are dropped at launch and noted in the log.</span><span class="zh">JSON 编辑器可以输入任意键，但只有内置白名单中的条目会被应用，其余的会在启动时剔除并记入日志。</span><span class="es">El editor JSON acepta cualquier clave, pero solo se aplican las entradas de la lista permitida integrada. Las demás se descartan al iniciar y quedan anotadas en el registro.</span></p>
       <div class="chips"><code>DFIntTaskSchedulerTargetFps</code><code>FFlagDisablePostFx</code><code>FFlagDebugGraphicsPreferVulkan</code><code>DFIntDebugFRMQualityLevelOverride</code><code>FIntDebugForceMSAASamples</code><code>DFIntTextureQualityOverride</code></div>
     </div>
     <pre class="code" aria-label="FastFlags example"><span class="k">{</span>
@@ -227,19 +246,19 @@ footer{padding-block:40px 56px;border-top:1px solid var(--line);color:var(--mute
 </section>
 
 <section id="mods">
-  <h2><span class="ja">フォントもスカイボックスも、ボタンひとつ</span><span class="en">One button for fonts, skyboxes and more</span></h2>
-  <p class="sub"><span class="ja">ファイルかフォルダを選ぶだけです。ファイルの置き場所やRobloxの内部フォルダを自分で探す必要はありません。選んだものは設定に保存され、起動のたびに自動で適用されます(変更は次回の起動時に反映されます)。</span><span class="en">Pick a file or a folder and you are done. No digging through Roblox's internal folders. Your choice is saved and applied on every launch (changes take effect on the next launch).</span></p>
+  <h2><span class="ja">フォントもスカイボックスも、ボタンひとつ</span><span class="en">One button for fonts, skyboxes and more</span><span class="zh">字体、天空盒等，一个按钮搞定</span><span class="es">Un botón para fuentes, skyboxes y más</span></h2>
+  <p class="sub"><span class="ja">ファイルかフォルダを選ぶだけです。ファイルの置き場所やRobloxの内部フォルダを自分で探す必要はありません。選んだものは設定に保存され、起動のたびに自動で適用されます(変更は次回の起動時に反映されます)。</span><span class="en">Pick a file or a folder and you are done. No digging through Roblox's internal folders. Your choice is saved and applied on every launch (changes take effect on the next launch).</span><span class="zh">选择一个文件或文件夹就行，不必翻找 Roblox 的内部文件夹。你的选择会被保存，并在每次启动时应用（更改将在下次启动时生效）。</span><span class="es">Elige un archivo o una carpeta y listo. Sin rebuscar en las carpetas internas de Roblox. Tu elección se guarda y se aplica en cada inicio (los cambios surten efecto en el siguiente inicio).</span></p>
   <div class="grid" style="margin-bottom:40px">
-    <div class="card"><span class="tag"><span class="ja">フォント</span><span class="en">Font</span></span><span class="pill"><span class="ja">フォントファイルを選択</span><span class="en">Select Font File</span></span><p style="margin-top:14px"><span class="ja">.ttf か .otf を1つ選ぶと、Robloxが使う主要なUIフォント(Source Sans Pro、Gotham、Builder Sans)がすべてそのフォントに置き換わります。</span><span class="en">Choose one .ttf or .otf and it replaces every main UI font Roblox uses (Source Sans Pro, Gotham and Builder Sans).</span></p></div>
-    <div class="card"><span class="tag"><span class="ja">スカイボックス</span><span class="en">Skybox</span></span><span class="pill"><span class="ja">スカイボックスフォルダを選択</span><span class="en">Select Skybox Folder</span></span><p style="margin-top:14px"><span class="ja">bk, dn, ft, lf, rt, up で終わる名前の6枚を入れたフォルダを選びます。面ごとに正しい場所へ自動でコピーされます。</span><span class="en">Choose a folder with six images whose names end in bk, dn, ft, lf, rt and up. Each face is copied to the right place for you.</span></p></div>
-    <div class="card"><span class="tag"><span class="ja">死亡音</span><span class="en">Death sound</span></span><span class="pill"><span class="ja">音声ファイルを選択</span><span class="en">Select Audio</span></span><p style="margin-top:14px"><span class="ja">mp3、wav、m4a、aac、flac、wma も選べます。ogg 以外はFFmpegで自動変換されます。FFmpegは初回だけ自動でダウンロードされるため、そのときはネット接続が必要です。</span><span class="en">Pick mp3, wav, m4a, aac, flac or wma too. Anything that is not ogg is converted with FFmpeg, which is downloaded automatically the first time, so you need a connection then.</span></p></div>
-    <div class="card"><span class="tag"><span class="ja">カーソル</span><span class="en">Cursor</span></span><span class="pill"><span class="ja">カーソル画像 (.png) を選択</span><span class="en">Select Cursor (.png)</span></span><p style="margin-top:14px"><span class="ja">自分のPNGのほか、Windowsで使用中のカーソルや昔のクラシックカーソルをラジオボタンで選べます。</span><span class="en">Use your own PNG, or choose your current Windows cursor or the classic one with a radio button.</span></p></div>
+    <div class="card"><span class="tag"><span class="ja">フォント</span><span class="en">Font</span><span class="zh">字体</span><span class="es">Fuente</span></span><span class="pill"><span class="ja">フォントファイルを選択</span><span class="en">Select Font File</span><span class="zh">选择字体文件</span><span class="es">Seleccionar archivo de fuente</span></span><p style="margin-top:14px"><span class="ja">.ttf か .otf を1つ選ぶと、Robloxが使う主要なUIフォント(Source Sans Pro、Gotham、Builder Sans)がすべてそのフォントに置き換わります。</span><span class="en">Choose one .ttf or .otf and it replaces every main UI font Roblox uses (Source Sans Pro, Gotham and Builder Sans).</span><span class="zh">选择一个 .ttf 或 .otf，即可替换 Roblox 使用的所有主要界面字体（Source Sans Pro、Gotham 和 Builder Sans）。</span><span class="es">Elige un .ttf o .otf y sustituye todas las fuentes principales de la interfaz de Roblox (Source Sans Pro, Gotham y Builder Sans).</span></p></div>
+    <div class="card"><span class="tag"><span class="ja">スカイボックス</span><span class="en">Skybox</span><span class="zh">天空盒</span><span class="es">Skybox</span></span><span class="pill"><span class="ja">スカイボックスフォルダを選択</span><span class="en">Select Skybox Folder</span><span class="zh">选择天空盒文件夹</span><span class="es">Seleccionar carpeta de skybox</span></span><p style="margin-top:14px"><span class="ja">bk, dn, ft, lf, rt, up で終わる名前の6枚を入れたフォルダを選びます。面ごとに正しい場所へ自動でコピーされます。</span><span class="en">Choose a folder with six images whose names end in bk, dn, ft, lf, rt and up. Each face is copied to the right place for you.</span><span class="zh">选择包含 6 张图片的文件夹，文件名分别以 bk、dn、ft、lf、rt、up 结尾。每个面都会被复制到正确的位置。</span><span class="es">Elige una carpeta con seis imágenes cuyos nombres terminen en bk, dn, ft, lf, rt y up. Cada cara se copia automáticamente al lugar correcto.</span></p></div>
+    <div class="card"><span class="tag"><span class="ja">死亡音</span><span class="en">Death sound</span><span class="zh">死亡音效</span><span class="es">Sonido de muerte</span></span><span class="pill"><span class="ja">音声ファイルを選択</span><span class="en">Select Audio</span><span class="zh">选择音频</span><span class="es">Seleccionar audio</span></span><p style="margin-top:14px"><span class="ja">mp3、wav、m4a、aac、flac、wma も選べます。ogg 以外はFFmpegで自動変換されます。FFmpegは初回だけ自動でダウンロードされるため、そのときはネット接続が必要です。</span><span class="en">Pick mp3, wav, m4a, aac, flac or wma too. Anything that is not ogg is converted with FFmpeg, which is downloaded automatically the first time, so you need a connection then.</span><span class="zh">也可以选择 mp3、wav、m4a、aac、flac 或 wma。非 ogg 格式会用 FFmpeg 转换；FFmpeg 会在首次使用时自动下载，因此那时需要联网。</span><span class="es">También puedes elegir mp3, wav, m4a, aac, flac o wma. Lo que no sea ogg se convierte con FFmpeg, que se descarga automáticamente la primera vez, así que entonces necesitas conexión.</span></p></div>
+    <div class="card"><span class="tag"><span class="ja">カーソル</span><span class="en">Cursor</span><span class="zh">光标</span><span class="es">Cursor</span></span><span class="pill"><span class="ja">カーソル画像 (.png) を選択</span><span class="en">Select Cursor (.png)</span><span class="zh">选择光标 (.png)</span><span class="es">Seleccionar cursor (.png)</span></span><p style="margin-top:14px"><span class="ja">自分のPNGのほか、Windowsで使用中のカーソルや昔のクラシックカーソルをラジオボタンで選べます。</span><span class="en">Use your own PNG, or choose your current Windows cursor or the classic one with a radio button.</span><span class="zh">可以使用你自己的 PNG，也可以通过单选按钮选择当前的 Windows 光标或经典光标。</span><span class="es">Usa tu propio PNG, o elige con un botón de opción tu cursor actual de Windows o el clásico.</span></p></div>
   </div>
   <div class="tbl"><table>
-    <thead><tr><th><span class="ja">項目</span><span class="en">Item</span></th><th><span class="ja">解除するには</span><span class="en">To undo</span></th></tr></thead>
+    <thead><tr><th><span class="ja">項目</span><span class="en">Item</span><span class="zh">项目</span><span class="es">Elemento</span></th><th><span class="ja">解除するには</span><span class="en">To undo</span><span class="zh">如何还原</span><span class="es">Para deshacerlo</span></th></tr></thead>
     <tbody>
-      <tr><td><span class="ja">フォント / スカイボックス / 死亡音 / カーソル</span><span class="en">Font / Skybox / Death sound / Cursor</span></td><td><span class="ja">それぞれの横にある「解除」を押します。Mods全体は、ワンクリックでオフにもできます。</span><span class="en">Press Clear next to each one. You can also switch all mods off with a single checkbox.</span></td></tr>
-      <tr><td><span class="ja">そのほかのファイル</span><span class="en">Anything else</span></td><td><span class="ja">Mods フォルダに入れたファイルは、Robloxのフォルダ構造のままコピーされます。「Modsフォルダを開く」から開けます。</span><span class="en">Files in the Mods folder are copied into Roblox with the same folder layout. Open it with "Open Mods Folder".</span></td></tr>
+      <tr><td><span class="ja">フォント / スカイボックス / 死亡音 / カーソル</span><span class="en">Font / Skybox / Death sound / Cursor</span><span class="zh">字体 / 天空盒 / 死亡音效 / 光标</span><span class="es">Fuente / Skybox / Sonido de muerte / Cursor</span></td><td><span class="ja">それぞれの横にある「解除」を押します。Mods全体は、ワンクリックでオフにもできます。</span><span class="en">Press Clear next to each one. You can also switch all mods off with a single checkbox.</span><span class="zh">点击每一项旁边的“清除”。也可以用一个复选框一次性关闭所有 Mods。</span><span class="es">Pulsa «Quitar» junto a cada uno. También puedes desactivar todos los Mods con una sola casilla.</span></td></tr>
+      <tr><td><span class="ja">そのほかのファイル</span><span class="en">Anything else</span><span class="zh">其他文件</span><span class="es">Cualquier otro archivo</span></td><td><span class="ja">Mods フォルダに入れたファイルは、Robloxのフォルダ構造のままコピーされます。「Modsフォルダを開く」から開けます。</span><span class="en">Files in the Mods folder are copied into Roblox with the same folder layout. Open it with "Open Mods Folder".</span><span class="zh">Mods 文件夹中的文件会按相同的目录结构复制到 Roblox 中，可通过“打开 Mods 文件夹”打开。</span><span class="es">Los archivos de la carpeta de Mods se copian en Roblox con la misma estructura de carpetas. Ábrela con «Abrir carpeta de Mods».</span></td></tr>
     </tbody>
   </table></div>
 </section>
@@ -248,14 +267,14 @@ footer{padding-block:40px 56px;border-top:1px solid var(--line);color:var(--mute
   <div class="split">
     <div>
       <span class="tag">Open Source</span>
-      <h2><span class="ja">ソースコードは、すべて公開しています</span><span class="en">Every line of source is public</span></h2>
-      <p class="sub" style="margin-bottom:24px"><span class="ja">ランチャーはRobloxのフォルダと設定に手を入れるツールです。だから何をしているのかを、誰でも自分の目で確かめられるようにしました。気になる処理はコードで読めて、自分でビルドして動かせて、改善案はそのまま提案できます。</span><span class="en">A launcher touches Roblox's folders and settings, so you should be able to see exactly what it does. Read any behavior in the code, build it yourself, and send improvements straight back.</span></p>
-      <p style="margin:0"><a class="btn primary" href="https://github.com/Azuk1-azq/azqlauncher/tree/main"><span class="ja">GitHubでソースを見る</span><span class="en">View source on GitHub</span></a></p>
+      <h2><span class="ja">ソースコードは、すべて公開しています</span><span class="en">Every line of source is public</span><span class="zh">全部源代码都是公开的</span><span class="es">Todo el código fuente es público</span></h2>
+      <p class="sub" style="margin-bottom:24px"><span class="ja">ランチャーはRobloxのフォルダと設定に手を入れるツールです。だから何をしているのかを、誰でも自分の目で確かめられるようにしました。気になる処理はコードで読めて、自分でビルドして動かせて、改善案はそのまま提案できます。</span><span class="en">A launcher touches Roblox's folders and settings, so you should be able to see exactly what it does. Read any behavior in the code, build it yourself, and send improvements straight back.</span><span class="zh">启动器会改动 Roblox 的文件夹和设置，所以你应该能清楚看到它做了什么。任何行为都可以在代码中查阅，可以自己构建，也可以直接提交改进。</span><span class="es">Un launcher toca las carpetas y los ajustes de Roblox, así que deberías poder ver exactamente qué hace. Lee cualquier comportamiento en el código, compílalo tú mismo y envía mejoras directamente.</span></p>
+      <p style="margin:0"><a class="btn primary" href="https://github.com/Azuk1-azq/azqlauncher/tree/main"><span class="ja">GitHubでソースを見る</span><span class="en">View source on GitHub</span><span class="zh">在 GitHub 上查看源码</span><span class="es">Ver el código en GitHub</span></a></p>
     </div>
     <div class="grid" style="grid-template-columns:minmax(0,1fr)">
-      <div class="card"><h3><span class="ja">読んで確かめられる</span><span class="en">Read it</span></h3><p><span class="ja">書き込むのはRobloxのバージョンフォルダ、ランチャー自身の設定、ブラウザ連携用のレジストリ(現在のユーザー分のみ)です。FastFlagsの許可リストもコードにそのまま書いてあります。</span><span class="en">It writes to the Roblox version folder, its own settings, and the per-user registry keys for browser launch. The FastFlags allowlist is right there in the code.</span></p></div>
-      <div class="card"><h3><span class="ja">自分でビルドできる</span><span class="en">Build it</span></h3><p><span class="ja">配布のzipを使わず、ソースから自分でビルドした実行ファイルを使えます。.NET 8 SDKだけで動きます。</span><span class="en">Skip the release zip and run your own build. The .NET 8 SDK is all you need.</span></p></div>
-      <div class="card"><h3><span class="ja">一緒に育てられる</span><span class="en">Shape it</span></h3><p><span class="ja">不具合の報告、機能の提案、コードの修正をGitHubで受け付けています。</span><span class="en">Report bugs, suggest features and send fixes on GitHub.</span></p></div>
+      <div class="card"><h3><span class="ja">読んで確かめられる</span><span class="en">Read it</span><span class="zh">可以阅读</span><span class="es">Léelo</span></h3><p><span class="ja">書き込むのはRobloxのバージョンフォルダ、ランチャー自身の設定、ブラウザ連携用のレジストリ(現在のユーザー分のみ)です。FastFlagsの許可リストもコードにそのまま書いてあります。</span><span class="en">It writes to the Roblox version folder, its own settings, and the per-user registry keys for browser launch. The FastFlags allowlist is right there in the code.</span><span class="zh">它只会写入 Roblox 的版本文件夹、自身设置，以及用于浏览器启动的当前用户注册表项。FastFlags 白名单就直接写在代码里。</span><span class="es">Escribe en la carpeta de versión de Roblox, en sus propios ajustes y en las claves de registro por usuario para el inicio desde el navegador. La lista permitida de FastFlags está ahí mismo, en el código.</span></p></div>
+      <div class="card"><h3><span class="ja">自分でビルドできる</span><span class="en">Build it</span><span class="zh">可以自行构建</span><span class="es">Compílalo</span></h3><p><span class="ja">配布のzipを使わず、ソースから自分でビルドした実行ファイルを使えます。.NET 8 SDKだけで動きます。</span><span class="en">Skip the release zip and run your own build. The .NET 8 SDK is all you need.</span><span class="zh">不必使用发布的 zip，可以运行自己构建的版本。只需要 .NET 8 SDK。</span><span class="es">Sáltate el zip de la versión y ejecuta tu propia compilación. Solo necesitas el SDK de .NET 8.</span></p></div>
+      <div class="card"><h3><span class="ja">一緒に育てられる</span><span class="en">Shape it</span><span class="zh">一起完善</span><span class="es">Mejóralo</span></h3><p><span class="ja">不具合の報告、機能の提案、コードの修正をGitHubで受け付けています。</span><span class="en">Report bugs, suggest features and send fixes on GitHub.</span><span class="zh">欢迎在 GitHub 上报告问题、提出功能建议、提交修复。</span><span class="es">Informa de errores, sugiere funciones y envía correcciones en GitHub.</span></p></div>
     </div>
   </div>
 </section>
@@ -263,15 +282,15 @@ footer{padding-block:40px 56px;border-top:1px solid var(--line);color:var(--mute
 <section id="start">
   <div class="split">
     <div>
-      <h2><span class="ja">ダウンロードして使う</span><span class="en">Download and run</span></h2>
-      <p class="sub"><span class="ja">Windows 10/11 と .NET 8 ランタイムが必要です。Robloxは先にインストールしておいてください。zipを展開して AZQLAUNCHER.exe を起動すれば使えます。</span><span class="en">Needs Windows 10 or 11 and the .NET 8 runtime. Install Roblox first. Unzip the archive and run AZQLAUNCHER.exe.</span></p>
-      <p style="margin:0 0 36px"><a class="btn primary" href="https://github.com/Azuk1-azq/azqlauncher/releases/download/beta-0.05/AZQLAUNCHER.zip"><span class="ja">AZQLAUNCHER.zip をダウンロード</span><span class="en">Download AZQLAUNCHER.zip</span></a></p>
-      <h3 style="font:700 17px var(--font-display);margin:0 0 14px"><span class="ja">ソースからビルドする場合</span><span class="en">Or build from source</span></h3>
+      <h2><span class="ja">ダウンロードして使う</span><span class="en">Download and run</span><span class="zh">下载并使用</span><span class="es">Descarga y ejecuta</span></h2>
+      <p class="sub"><span class="ja">Windows 10/11 と .NET 8 ランタイムが必要です。Robloxは先にインストールしておいてください。zipを展開して AZQLAUNCHER.exe を起動すれば使えます。</span><span class="en">Needs Windows 10 or 11 and the .NET 8 runtime. Install Roblox first. Unzip the archive and run AZQLAUNCHER.exe.</span><span class="zh">需要 Windows 10 或 11 以及 .NET 8 运行时。请先安装 Roblox，解压压缩包后运行 AZQLAUNCHER.exe。</span><span class="es">Requiere Windows 10 u 11 y el runtime de .NET 8. Instala Roblox primero. Descomprime el archivo y ejecuta AZQLAUNCHER.exe.</span></p>
+      <p style="margin:0 0 36px"><a class="btn primary" href="https://github.com/Azuk1-azq/azqlauncher/releases/download/beta-0.06/AZQLAUNCHER.zip"><span class="ja">AZQLAUNCHER.zip をダウンロード</span><span class="en">Download AZQLAUNCHER.zip</span><span class="zh">下载 AZQLAUNCHER.zip</span><span class="es">Descargar AZQLAUNCHER.zip</span></a></p>
+      <h3 style="font:700 17px var(--font-display);margin:0 0 14px"><span class="ja">ソースからビルドする場合</span><span class="en">Or build from source</span><span class="zh">或者从源码构建</span><span class="es">O compila desde el código fuente</span></h3>
       <ol class="steps">
-        <li><span><span class="ja">リポジトリのフォルダでビルドします。</span><span class="en">Build from the project folder.</span></span></li>
-        <li><span><span class="ja">出力フォルダの AZQLAUNCHER.exe を起動します。</span><span class="en">Run AZQLAUNCHER.exe from the output folder.</span></span></li>
-        <li><span><span class="ja">初回の紹介ガイドを読んで「はじめる」を押します。</span><span class="en">Read the welcome guide and press Get Started.</span></span></li>
-        <li><span><span class="ja">FastFlagsやModsを選び、「Robloxを直接起動」を押します。</span><span class="en">Pick your flags and mods, then press Launch Roblox.</span></span></li>
+        <li><span><span class="ja">リポジトリのフォルダでビルドします。</span><span class="en">Build from the project folder.</span><span class="zh">在项目文件夹中构建。</span><span class="es">Compila desde la carpeta del proyecto.</span></span></li>
+        <li><span><span class="ja">出力フォルダの AZQLAUNCHER.exe を起動します。</span><span class="en">Run AZQLAUNCHER.exe from the output folder.</span><span class="zh">运行输出文件夹中的 AZQLAUNCHER.exe。</span><span class="es">Ejecuta AZQLAUNCHER.exe desde la carpeta de salida.</span></span></li>
+        <li><span><span class="ja">初回の紹介ガイドを読んで「はじめる」を押します。</span><span class="en">Read the welcome guide and press Get Started.</span><span class="zh">阅读欢迎指南，然后点击“开始使用”。</span><span class="es">Lee la guía de bienvenida y pulsa «Empezar».</span></span></li>
+        <li><span><span class="ja">FastFlagsやModsを選び、「Robloxを直接起動」を押します。</span><span class="en">Pick your flags and mods, then press Launch Roblox.</span><span class="zh">选择 FastFlags 和 Mods，然后点击“启动 Roblox”。</span><span class="es">Elige tus flags y mods, y luego pulsa «Iniciar Roblox».</span></span></li>
       </ol>
     </div>
     <pre class="code" aria-label="Build commands"><span style="color:var(--muted)"># build</span>
@@ -284,24 +303,25 @@ dotnet publish -c Release -r win-x64 \
 <span style="color:var(--muted)"># settings live next to the exe</span>
 config.json  Mods\  Assets\  Tools\</pre>
   </div>
-  <div class="note" style="margin-top:36px"><span class="ja">AZQLAUNCHER は個人が開発した非公式のツールで、Roblox Corporation とは関係ありません。Robloxの利用規約を守ってお使いください。現在はベータ版です。</span><span class="en">AZQLAUNCHER is an unofficial, independently made tool and is not affiliated with Roblox Corporation. Follow the Roblox Terms of Use. This is a beta release.</span></div>
+  <div class="note" style="margin-top:36px"><span class="ja">AZQLAUNCHER は個人が開発した非公式のツールで、Roblox Corporation とは関係ありません。Robloxの利用規約を守ってお使いください。現在はベータ版です。</span><span class="en">AZQLAUNCHER is an unofficial, independently made tool and is not affiliated with Roblox Corporation. Follow the Roblox Terms of Use. This is a beta release.</span><span class="zh">AZQLAUNCHER 是个人开发的非官方工具，与 Roblox Corporation 无关。请遵守 Roblox 使用条款。目前为测试版。</span><span class="es">AZQLAUNCHER es una herramienta no oficial hecha de forma independiente y no está afiliada a Roblox Corporation. Respeta los Términos de Uso de Roblox. Esta es una versión beta.</span></div>
 </section>
 
 <footer>
-  <div class="logo"><span class="mark"></span>AZQLAUNCHER<span class="badge">beta0.0.5</span></div>
-  <div><a href="https://github.com/Azuk1-azq/azqlauncher/tree/main">GitHub</a> · <span class="ja">Windows 10/11 · .NET 8 · WPF</span><span class="en">Windows 10/11 · .NET 8 · WPF</span></div>
+  <div class="logo"><span class="mark"></span>AZQLAUNCHER<span class="badge">beta0.0.6</span></div>
+  <div><a href="https://github.com/Azuk1-azq/azqlauncher/tree/main">GitHub</a> · <span class="ja">Windows 10/11 · .NET 8 · WPF</span><span class="en">Windows 10/11 · .NET 8 · WPF</span><span class="zh">Windows 10/11 · .NET 8 · WPF</span><span class="es">Windows 10/11 · .NET 8 · WPF</span></div>
 </footer>
 </div>
 
 <script>
 (function(){
-  var root=document.documentElement,ja=document.getElementById("b-ja"),en=document.getElementById("b-en");
-  function set(l,save){root.setAttribute("data-lang",l);root.lang=l;
-    ja.setAttribute("aria-pressed",l==="ja");en.setAttribute("aria-pressed",l==="en");
-    if(save){try{localStorage.setItem("azq-lang",l)}catch(e){}}}
-  var l=null;try{l=localStorage.getItem("azq-lang")}catch(e){}
-  if(l!=="ja"&&l!=="en")l=(navigator.language||"ja").slice(0,2)==="ja"?"ja":"en";
-  set(l,false);ja.onclick=function(){set("ja",true)};en.onclick=function(){set("en",true)};
+  var root=document.documentElement,ok={ja:"ja",en:"en",zh:"zh-CN",es:"es"},btns=document.querySelectorAll(".seg button[data-l]");
+  function mark(){var l=root.getAttribute("data-lang"),auto=root.getAttribute("data-auto")==="1";
+    for(var i=0;i<btns.length;i++){var k=btns[i].getAttribute("data-l");btns[i].setAttribute("aria-pressed",k==="auto"?auto:k===l)}}
+  function set(k){var auto=k==="auto",l=auto?window.azqDetect():k;
+    root.setAttribute("data-lang",l);root.setAttribute("data-auto",auto?"1":"0");root.lang=ok[l];mark();
+    try{if(auto)localStorage.removeItem("azq-lang");else localStorage.setItem("azq-lang",l)}catch(e){}}
+  mark();
+  for(var i=0;i<btns.length;i++)btns[i].onclick=function(){set(this.getAttribute("data-l"))};
 })();
 </script>
 
